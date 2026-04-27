@@ -1,0 +1,12 @@
+# Android (application)
+application/.idea/
+application/.gradle/
+application/local.properties
+**/build/
+
+# Arduino (firmware)
+
+
+# Systemowe
+.DS_Store
+Thumbs.db
