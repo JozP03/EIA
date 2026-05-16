@@ -1,5 +1,9 @@
 package com.example.eia_app;
 
+import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
+
+/*
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -8,7 +12,6 @@ import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -19,7 +22,6 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
@@ -31,10 +33,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Executors;
+*/
 
-public class MainActivity extends AppCompatActivity implements SerialInputOutputManager.Listener {
+public class MainActivity extends AppCompatActivity {
 
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+    }
+
+    /*
     private static final String TAG = "USB_TEST";
     private static final String ACTION_USB_PERMISSION = "com.example.eia_app.USB_PERMISSION";
 
@@ -49,30 +58,6 @@ public class MainActivity extends AppCompatActivity implements SerialInputOutput
 
     private final List<String> networksList = new ArrayList<>();
     private ArrayAdapter<String> spinnerAdapter;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        statusText = findViewById(R.id.textView5);
-        configLayout = findViewById(R.id.configLayout);
-        wifiSpinner = findViewById(R.id.spinner);
-        passwordInput = findViewById(R.id.editTextTextPassword);
-        connectButton = findViewById(R.id.button);
-
-        spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, networksList);
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        wifiSpinner.setAdapter(spinnerAdapter);
-
-        connectButton.setOnClickListener(v -> {
-            if (usbPort == null) {
-                initUsb();
-            } else {
-                sendWifiCredentials();
-            }
-        });
-    }
 
     @Override
     protected void onResume() {
@@ -230,4 +215,5 @@ public class MainActivity extends AppCompatActivity implements SerialInputOutput
         super.onDestroy();
         closeUsb();
     }
+    */
 }

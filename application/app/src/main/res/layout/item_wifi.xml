@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="@color/card_bg"
+    android:foreground="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardWifiIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="#F1F5F9"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <ImageView
+                android:id="@+id/ivWifiIcon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_gravity="center"
+                android:contentDescription="@string/wifi_icon_description"
+                android:src="@android:drawable/ic_dialog_info"
+                app:tint="@color/accent_blue" />
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/tvWifiName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:text="Home_5G"
+            android:textColor="@color/text_main"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            app:layout_constraintStart_toEndOf="@id/cardWifiIcon"
+            app:layout_constraintEnd_toStartOf="@id/ivLockIcon"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/layoutSignal"/>
+
+        <LinearLayout
+            android:id="@+id/layoutSignal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="4dp"
+            app:layout_constraintStart_toEndOf="@id/cardWifiIcon"
+            app:layout_constraintTop_toBottomOf="@id/tvWifiName"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <View
+                android:id="@+id/viewSignalDot"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="@color/accent_green"/>
+
+            <TextView
+                android:id="@+id/tvSignalStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SILNY SYGNAŁ"
+                android:textColor="@color/text_muted"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginStart="6dp"/>
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/ivLockIcon"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@string/lock_icon_description"
+            android:src="@android:drawable/ic_lock_idle_lock"
+            app:tint="@color/text_muted"
+            android:layout_marginEnd="16dp"
+            app:layout_constraintEnd_toStartOf="@id/ivArrowRight"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <ImageView
+            android:id="@+id/ivArrowRight"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="@string/arrow_right_description"
+            android:src="@android:drawable/ic_media_play"
+            app:tint="@color/border_gray"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border_gray"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"/>
+</androidx.cardview.widget.CardView>
