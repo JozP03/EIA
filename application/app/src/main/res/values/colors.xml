@@ -7,5 +7,6 @@
     <color name="text_muted">#64748B</color>
     <color name="accent_blue">#0EA5E9</color>
     <color name="accent_green">#22C55E</color>
+    <color name="accent_red">#F00617</color>
     <color name="border_gray">#E2E8F0</color>
 </resources>

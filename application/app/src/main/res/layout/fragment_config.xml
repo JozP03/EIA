@@ -19,7 +19,6 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp"
-            app:layout_getTop="parent"
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageButton
@@ -28,6 +27,7 @@
                 android:layout_height="40dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:src="@android:drawable/ic_menu_revert"
+                android:contentDescription="@string/back_button_description"
                 app:tint="@color/text_main" />
 
             <TextView
@@ -87,6 +87,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:src="@android:drawable/ic_dialog_info"
+                    android:contentDescription="@string/info_icon_description"
                     app:tint="@color/text_main" />
 
                 <LinearLayout
