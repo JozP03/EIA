@@ -1,6 +1,11 @@
 package com.example.eia_app;
 
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
@@ -10,15 +15,16 @@ import androidx.fragment.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.navigation.Navigation;
 
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
-import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,6 +36,8 @@ import java.util.List;
  */
 public class ConnectionFragment extends Fragment {
 
+    private static final String ACTION_USB_PERMISSION = "com.example.eia_app.USB_PERMISSION";
+    private UsbSerialPort usbPort;
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -39,9 +47,21 @@ public class ConnectionFragment extends Fragment {
     private String mParam1;
     private String mParam2;
 
-    public ConnectionFragment() {
-        // Required empty public constructor
-    }
+    private final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (ACTION_USB_PERMISSION.equals(intent.getAction())) {
+                synchronized (this) {
+                    UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
+                        if (device != null) {
+                            initUSB();
+                        }
+                    }
+                }
+            }
+        }
+    };
 
     /**
      * Use this factory method to create a new instance of
@@ -73,7 +93,6 @@ public class ConnectionFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_connection, container, false);
     }
 
@@ -83,30 +102,80 @@ public class ConnectionFragment extends Fragment {
 
         // connect button
         view.findViewById(R.id.btnConnect).setOnClickListener(v -> {
-            // todo: sprawdzanie usb
-            Navigation.findNavController(view).navigate(R.id.action_connectionFragment_to_scanFragment);
+            initUSB();
         });
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        try {
+            requireContext().unregisterReceiver(usbReceiver);
+        } catch (IllegalArgumentException e) {
+            // Receiver not registered
+        }
+        if (usbPort != null) {
+            try {
+                usbPort.close();
+            } catch (IOException ignored) {}
+        }
+    }
+
     // todo: zrobic to
-    private void initUSB() throws IOException {
-        // Find all available drivers from attached devices.
+    private void initUSB() {
         UsbManager manager = (UsbManager) requireContext().getSystemService(Context.USB_SERVICE);
         List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
+
         if (availableDrivers.isEmpty()) {
+            // brak urzadzen
+            Toast.makeText(requireContext(), "Brak podłączonych urządzeń USB", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Open a connection to the first available driver.
         UsbSerialDriver driver = availableDrivers.get(0);
-        UsbDeviceConnection connection = manager.openDevice(driver.getDevice());
-        if (connection == null) {
-            // add UsbManager.requestPermission(driver.getDevice(), ..) handling here
+        UsbDevice device = driver.getDevice();
+
+        if (!manager.hasPermission(device)) {
+            //zapytanie dla uzytkownika
+            Intent intent = new Intent(ACTION_USB_PERMISSION);
+            intent.setPackage(requireContext().getPackageName());
+            PendingIntent permissionIntent = PendingIntent.getBroadcast(requireContext(), 0, intent, PendingIntent.FLAG_MUTABLE);
+
+            IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
+            ContextCompat.registerReceiver(requireContext(), usbReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+
+            manager.requestPermission(device, permissionIntent);
             return;
         }
 
-        UsbSerialPort port = driver.getPorts().get(0); // Most devices have just one port (port 0)
-        port.open(connection);
-        port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+        try {
+            UsbDeviceConnection connection = manager.openDevice(device);
+            if (connection == null) {
+                // Nie udało się otworzyć połączenia mimo uprawnień
+                return;
+            }
+
+            usbPort = driver.getPorts().get(0);
+            usbPort.open(connection);
+            usbPort.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+
+            // przejscie do next ekranu
+            //todo: do zmiany to zapewnie
+            requireActivity().runOnUiThread(() -> {
+                if (getView() != null) {
+                    Navigation.findNavController(getView()).navigate(R.id.action_connectionFragment_to_scanFragment);
+                }
+            });
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Obsługa błędów wejścia/wyjścia
+            if (usbPort != null) {
+                try {
+                    usbPort.close();
+                } catch (IOException ignored) {
+                }
+            }
+        }
     }
 }
