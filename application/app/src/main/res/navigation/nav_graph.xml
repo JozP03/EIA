@@ -6,7 +6,7 @@
     app:startDestination="@id/connectionFragment">
     <fragment
         android:id="@+id/connectionFragment"
-        android:name="com.example.eia_app.ConnectionFragment"
+        android:name="com.example.eia_app.fragments.ConnectionFragment"
         android:label="fragment_connection"
         tools:layout="@layout/fragment_connection" >
         <action
@@ -15,7 +15,7 @@
     </fragment>
     <fragment
         android:id="@+id/scanFragment"
-        android:name="com.example.eia_app.ScanFragment"
+        android:name="com.example.eia_app.fragments.ScanFragment"
         android:label="fragment_scan"
         tools:layout="@layout/fragment_scan" >
         <action
@@ -27,7 +27,7 @@
     </fragment>
     <fragment
         android:id="@+id/configFragment"
-        android:name="com.example.eia_app.ConfigFragment"
+        android:name="com.example.eia_app.fragments.ConfigFragment"
         android:label="fragment_config"
         tools:layout="@layout/fragment_config" >
         <action
@@ -39,7 +39,7 @@
     </fragment>
     <fragment
         android:id="@+id/dashboardFragment"
-        android:name="com.example.eia_app.DashboardFragment"
+        android:name="com.example.eia_app.fragments.DashboardFragment"
         android:label="fragment_dashboard"
         tools:layout="@layout/fragment_dashboard" />
 </navigation>

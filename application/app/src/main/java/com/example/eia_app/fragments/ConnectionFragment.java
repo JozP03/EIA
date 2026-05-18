@@ -1,4 +1,4 @@
-package com.example.eia_app;
+package com.example.eia_app.fragments;
 
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -22,6 +22,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.navigation.Navigation;
 
+import com.example.eia_app.R;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
@@ -121,7 +122,7 @@ public class ConnectionFragment extends Fragment {
         }
     }
 
-    // todo: zrobic to
+    // todo: przenieść jako servis
     private void initUSB() {
         UsbManager manager = (UsbManager) requireContext().getSystemService(Context.USB_SERVICE);
         List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(manager);
