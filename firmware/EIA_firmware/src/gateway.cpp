@@ -1,6 +1,5 @@
 #include <WiFi.h>
 
-// Definicja timeoutu dla połączenia (15 sekund)
 const int WIFI_TIMEOUT_MS = 15000;
 
 void executeWifiScan();
@@ -19,32 +18,52 @@ void loop() {
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     input.trim(); 
+    input.toUpperCase(); // Konwertujemy na duże litery, aby "scan" i "SCAN" działały tak samo
 
     if (input == "SCAN") {
       executeWifiScan();
     } 
     else if (input.startsWith("CONN:")) {
-      handleConnectionRequest(input);
+      // Przy połączeniu zachowujemy oryginalny input (wielkość liter w haśle ma znaczenie!)
+      handleConnectionRequest(input); 
     }
   }
 }
 
 void executeWifiScan() {
-  int n = WiFi.scanNetworks();
+  // Skanujemy sieci w trybie asynchronicznym = false (blokujący)
+  // Trzeci parametr (false) oznacza, że nie pokazujemy sieci ukrytych
+  int n = WiFi.scanNetworks(false, false);
   
   if (n == 0) {
-    Serial.println("NETWORKS:BRAK_SIECI");
+    Serial.println("STATUS:BRAK_SIECI");
   } else {
-    String response = "NETWORKS:";
+    // Wysyłamy każdą sieć w osobnej linijce
     for (int i = 0; i < n; ++i) {
-      response += WiFi.SSID(i);
-      if (i < n - 1) {
-        response += ",";
-      }
+      String ssid = WiFi.SSID(i);
+      int32_t rssi = WiFi.RSSI(i);
+      
+      // WiFi.encryptionType(i) zwraca typ szyfrowania.
+      // Jeśli jest różny od WIFI_AUTH_OPEN (czyli 0), to sieć jest zabezpieczona.
+      bool isProtected = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
+      String protectedStr = isProtected ? "1" : "0";
+
+      // Format: NAZWA_SIECI,RSSI,CZY_ZABEZPIECZONA
+      // Przykład: MojeSuperWiFi,-65,1
+      Serial.print(ssid);
+      Serial.print(",");
+      Serial.print(rssi);
+      Serial.print(",");
+      Serial.println(protectedStr);
+      
+      delay(10); // Małe opóźnienie, żeby nie zapchać bufora Seriala
     }
-    Serial.println(response);
   }
   
+  // Informujemy Androida, że to już koniec listy
+  Serial.println("SCAN_FINISHED");
+  
+  // Czyszczenie pamięci po skanowaniu
   WiFi.scanDelete();
 }
 
@@ -56,6 +75,7 @@ void handleConnectionRequest(String cmd) {
     return;
   }
 
+  // Wycinamy SSID i hasło na podstawie formatu CONN:Ssid;Haslo
   String ssid = cmd.substring(5, separatorIndex);
   String password = cmd.substring(separatorIndex + 1);
 

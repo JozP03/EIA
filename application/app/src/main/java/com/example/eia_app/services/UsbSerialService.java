@@ -31,10 +31,15 @@ public class UsbSerialService extends Service {
     private UsbManager usbManager;
     private ConnectionCallback connectionCallback;
 
+    private Thread readThread;
+    private boolean isReading = false;
+    private final StringBuilder incomingBuffer = new StringBuilder();
+
     public interface ConnectionCallback {
         void onConnectionSuccess();
         void onConnectionError(String message);
         void onPermissionRequested();
+        void onDataReceived(String line);
     }
 
     public class UsbBinder extends Binder {
@@ -100,6 +105,8 @@ public class UsbSerialService extends Service {
             Log.d(TAG, "USB Connected successfully");
             if (connectionCallback != null) connectionCallback.onConnectionSuccess();
 
+            startReading();
+
         } catch (IOException e) {
             Log.e(TAG, "Error connecting to USB", e);
             if (connectionCallback != null) connectionCallback.onConnectionError("Błąd: " + e.getMessage());
@@ -107,7 +114,63 @@ public class UsbSerialService extends Service {
         }
     }
 
+    public void sendCommand(String command) {
+        if (usbPort != null && usbPort.isOpen()) {
+            new Thread(() -> {
+                try {
+                    byte[] data = command.getBytes();
+                    usbPort.write(data, 2000);
+                    Log.d(TAG, "Wysłano komendę: " + command.trim());
+                } catch (IOException e) {
+                    Log.e(TAG, "Błąd wysyłania komendy", e);
+                }
+            }).start();
+        } else {
+            if (connectionCallback != null) connectionCallback.onConnectionError("Brak połączenia. Nie można wysłać komendy.");
+        }
+    }
+
+    private void startReading() {
+        isReading = true;
+        readThread = new Thread(() -> {
+            byte[] buffer = new byte[4096];
+            while (isReading && usbPort != null && usbPort.isOpen()) {
+                try {
+                    int len = usbPort.read(buffer, 200);
+                    if (len > 0) {
+                        String str = new String(buffer, 0, len);
+                        processIncomingData(str);
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "Błąd podczas odczytu z portu, zatrzymywanie wątku", e);
+                    break;
+                }
+            }
+        });
+        readThread.start();
+    }
+
+    private void processIncomingData(String data) {
+        incomingBuffer.append(data);
+        int i;
+        // Szukamy znaków nowej linii (\n) i wycinamy pełne wiadomości
+        while ((i = incomingBuffer.indexOf("\n")) != -1) {
+            String line = incomingBuffer.substring(0, i).trim();
+            incomingBuffer.delete(0, i + 1);
+
+            if (!line.isEmpty() && connectionCallback != null) {
+                // Przekazujemy linię do fragmentu na głównym wątku (UI)
+                connectionCallback.onDataReceived(line);
+            }
+        }
+    }
+
     public void closePort() {
+        isReading = false;
+        if (readThread != null) {
+            readThread.interrupt();
+            readThread = null;
+        }
         if (usbPort != null) {
             try {
                 usbPort.close();

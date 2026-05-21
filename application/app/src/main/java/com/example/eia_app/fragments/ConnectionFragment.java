@@ -93,6 +93,11 @@ public class ConnectionFragment extends Fragment {
             public void onPermissionRequested() {
 
             }
+
+            @Override
+            public void onDataReceived(String line) {
+                // ConnectionFragment nie potrzebuje danych, ale musimy zaimplementować metodę
+            }
         });
     }
 }
