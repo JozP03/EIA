@@ -36,6 +36,11 @@
         <action
             android:id="@+id/action_configFragment_to_scanFragment"
             app:destination="@id/scanFragment" />
+        <argument
+            android:name="selected_ssid"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
     </fragment>
     <fragment
         android:id="@+id/dashboardFragment"
