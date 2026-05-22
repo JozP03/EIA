@@ -10,3 +10,9 @@ application/local.properties
 # Systemowe
 .DS_Store
 Thumbs.db
+firmware/client/test/README
+firmware/client/lib/README
+firmware/client/include/README
+firmware/gateway/include/README
+firmware/gateway/lib/README
+firmware/gateway/test/README
