@@ -75,7 +75,8 @@ public class ConnectionFragment extends Fragment {
         usbService.setConnectionCallback(new UsbSerialService.ConnectionCallback() {
             @Override
             public void onConnectionSuccess() {
-                requireActivity().runOnUiThread(() -> {
+                if (getActivity() == null || !isAdded()) return;
+                getActivity().runOnUiThread(() -> {
                     if (getView() != null) {
                         Navigation.findNavController(getView()).navigate(R.id.action_connectionFragment_to_scanFragment);
                     }
@@ -84,8 +85,9 @@ public class ConnectionFragment extends Fragment {
 
             @Override
             public void onConnectionError(String message) {
-                requireActivity().runOnUiThread(() -> 
-                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                if (getActivity() == null || !isAdded()) return;
+                getActivity().runOnUiThread(() -> 
+                    Toast.makeText(getContext(), message, Toast.LENGTH_SHORT).show()
                 );
             }
 
@@ -96,7 +98,7 @@ public class ConnectionFragment extends Fragment {
 
             @Override
             public void onDataReceived(String line) {
-                // ConnectionFragment nie potrzebuje danych, ale musimy zaimplementować metodę
+
             }
         });
     }

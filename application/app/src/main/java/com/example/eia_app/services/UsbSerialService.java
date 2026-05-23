@@ -134,9 +134,12 @@ public class UsbSerialService extends Service {
         isReading = true;
         readThread = new Thread(() -> {
             byte[] buffer = new byte[4096];
-            while (isReading && usbPort != null && usbPort.isOpen()) {
+            while (isReading) {
+                UsbSerialPort port = usbPort; // Lokalna referencja dla bezpieczeństwa wątkowego
+                if (port == null || !port.isOpen()) break;
+
                 try {
-                    int len = usbPort.read(buffer, 200);
+                    int len = port.read(buffer, 200);
                     if (len > 0) {
                         String str = new String(buffer, 0, len);
                         processIncomingData(str);

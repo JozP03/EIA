@@ -1,9 +1,10 @@
 #include <WiFi.h>
 
-const int WIFI_TIMEOUT_MS = 15000;
+const int WIFI_TIMEOUT_MS = 25000;
 
 void executeWifiScan();
 void handleConnectionRequest(String cmd);
+void handleStaticConnectionRequest(String cmd);
 
 void setup() {
   Serial.begin(115200);
@@ -17,15 +18,19 @@ void setup() {
 void loop() {
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
-    input.trim(); 
-    input.toUpperCase(); // Konwertujemy na duże litery, aby "scan" i "SCAN" działały tak samo
+    input.trim();
 
-    if (input == "SCAN") {
+    if (input.equalsIgnoreCase("SCAN")) {
       executeWifiScan();
-    } 
+    }
     else if (input.startsWith("CONN:")) {
-      // Przy połączeniu zachowujemy oryginalny input (wielkość liter w haśle ma znaczenie!)
-      handleConnectionRequest(input); 
+      handleConnectionRequest(input);
+    }
+    else if (input.startsWith("CONN_STATIC:")) {
+      handleStaticConnectionRequest(input);
+    }
+    else {
+      Serial.println("STATUS:UNKNOWN_COMMAND");
     }
   }
 }
@@ -83,6 +88,68 @@ void handleConnectionRequest(String cmd) {
 
   unsigned long startAttemptTime = millis();
 
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS) {
+    delay(500);
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("STATUS:OK;IP:");
+    Serial.println(WiFi.localIP().toString());
+  } else {
+    Serial.println("STATUS:ERROR_TIMEOUT");
+    WiFi.disconnect();
+  }
+}
+
+void handleStaticConnectionRequest(String cmd) {
+  // Wycinamy nagłówek "CONN_STATIC:" (12 znaków)
+  String data = cmd.substring(12); 
+  
+  // Tablica na 5 wyciętych stringów: [0]=SSID, [1]=Haslo, [2]=IP, [3]=Brama, [4]=Maska
+  String parts[5];
+  int partCount = 0;
+  
+  // Prosty parser dzielący tekst po średnikach
+  while (data.length() > 0 && partCount < 5) {
+    int idx = data.indexOf(';');
+    if (idx == -1) {
+      parts[partCount++] = data;
+      break;
+    } else {
+      parts[partCount++] = data.substring(0, idx);
+      data = data.substring(idx + 1);
+    }
+  }
+
+  // Sprawdzamy czy otrzymaliśmy komplet danych
+  if (partCount < 5) {
+    Serial.println("STATUS:ERROR_FORMAT");
+    return;
+  }
+
+  String ssid = parts[0];
+  String password = parts[1];
+  
+  // Konwersja IP ze Stringów na obiekty IPAddress
+  IPAddress local_IP;
+  IPAddress gateway;
+  IPAddress subnet;
+  
+  if (!local_IP.fromString(parts[2]) || !gateway.fromString(parts[3]) || !subnet.fromString(parts[4])) {
+    Serial.println("STATUS:ERROR_IP_PARSING");
+    return;
+  }
+
+  // Konfiguracja statycznego IP w ESP32
+  if (!WiFi.config(local_IP, gateway, subnet)) {
+    Serial.println("STATUS:ERROR_CONFIG_FAILED");
+    return;
+  }
+
+  // Uruchomienie połączenia
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  unsigned long startAttemptTime = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS) {
     delay(500);
   }

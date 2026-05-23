@@ -55,17 +55,7 @@ public class ScanFragment extends Fragment implements UsbSerialService.Connectio
         // Konfiguracja RecyclerView
         RecyclerView rvWifiList = view.findViewById(R.id.rvWifiList);
         rvWifiList.setLayoutManager(new LinearLayoutManager(getContext()));
-
-        //dodanie dzialania przycisku i przekirowania do configu
-        adapter = new WifiAdapter(wifiList, network ->{
-            Bundle bundle = new Bundle();
-            bundle.putString("selected_ssid",network.getSsid());
-
-            Navigation.findNavController(view).navigate(
-                    R.id.action_scanFragment_to_configFragment,
-                    bundle
-            );
-        });
+        adapter = new WifiAdapter(wifiList, this);
         rvWifiList.setAdapter(adapter);
 
         // Powrót do poprzedniego ekranu
@@ -207,7 +197,7 @@ public class ScanFragment extends Fragment implements UsbSerialService.Connectio
     public void onNetworkClick(WifiNetwork network) {
         // Po kliknięciu w sieć przechodzimy do konfiguracji
         Bundle bundle = new Bundle();
-        bundle.putString("ssid", network.getSsid());
+        bundle.putString("selected_ssid", network.getSsid());
         Navigation.findNavController(requireView()).navigate(R.id.action_scanFragment_to_configFragment, bundle);
     }
 }
