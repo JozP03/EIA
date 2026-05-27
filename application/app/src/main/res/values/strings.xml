@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">EIA_app</string>
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="back_button_description">Wstecz</string>
+    <string name="help_icon_description">Pomoc</string>
+    <string name="wifi_icon_description">Ikona Wi-Fi</string>
+    <string name="lock_icon_description">Zabezpieczona sieć</string>
+    <string name="arrow_right_description">Wybierz</string>
+    <string name="usb_icon_description">Urządzenie USB</string>
+    <string name="info_icon_description">Informacja</string>
 </resources>
