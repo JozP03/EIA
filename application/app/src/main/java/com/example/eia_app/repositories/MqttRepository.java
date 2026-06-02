@@ -11,7 +11,7 @@ import java.util.UUID;
 public class MqttRepository {
     private static final String TAG = "MqttRepository";
     private static MqttRepository instance;
-    private final MutableLiveData<String> messageStream = new MutableLiveData<>();
+    private final MutableLiveData<Float> messageStream = new MutableLiveData<>();
 
     //testowe zmienne todo: Wpisywanie powinno być w ustawieniach. Przypisywanie do zmiennych
     String username = "";
@@ -47,6 +47,11 @@ public class MqttRepository {
                 }));
     }
 
+    public void disconnectFromBroker(){
+        Log.e(TAG,"Rozłączono z MQTT");
+        client.disconnect();
+    }
+
     public static synchronized MqttRepository getInstance(){
         if( instance == null ){
             instance = new MqttRepository();
@@ -69,12 +74,17 @@ public class MqttRepository {
                 .callback(mqtt5Publish -> {
                     String payload = new String(mqtt5Publish.getPayloadAsBytes());
 
-                    messageStream.postValue(payload);
+                    try{
+                        float value = Float.parseFloat(payload.trim());
+                        messageStream.postValue(value);
+                    }catch (NumberFormatException e){
+                        Log.e(TAG,"Błąd dekodowania: " + e.getMessage());
+                    }
                 })
                 .send();
     }
 
-    public LiveData<String> getMessageStream(){
+    public LiveData<Float> getMessageStream(){
         return messageStream;
     }
 }
