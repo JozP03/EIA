@@ -1,6 +1,10 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEScan.h>
+#include <BLEAdvertisedDevice.h>
 
 const int WIFI_TIMEOUT_MS = 25000;
 
@@ -47,14 +51,43 @@ const char* root_ca = \
 WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
 
+BLEScan* pBLEScan;
+unsigned long lastBleScanTime = 0;
+const unsigned long BLE_SCAN_INTERVAL = 5000;
+
+volatile bool newTemperatureAvailable = false; // Flaga informująca o nowych danych
+float latestTemperature = 0.0;
+
 void executeWifiScan();
 void handleConnectionRequest(String cmd);
 void handleStaticConnectionRequest(String cmd);
 void testMqttConnection();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
 
+// NOWE: Klasa callbacku wywoływana, gdy radio BLE coś znajdzie w powietrzu
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice advertisedDevice) {
+        // Sprawdzamy czy nazwa pasuje do naszego czujnika
+        if (advertisedDevice.getName() == "ESP_C3_TEMP") {
+            String data = advertisedDevice.getManufacturerData().c_str();
+            
+            // Sprawdzamy czy dane zaczynają się od "T:"
+            if (data.startsWith("T:")) {
+                String tempStr = data.substring(2);
+                
+                // Zapisujemy dane do bezpiecznych zmiennych globalnych
+                latestTemperature = tempStr.toFloat();
+                newTemperatureAvailable = true; 
+                
+                Serial.print("BLE_RCV: Wykryto temperaturę: ");
+                Serial.println(latestTemperature);
+            }
+        }
+    }
+};
+
 void setup() {
-  Serial.begin(9600); //zmienic pozniej na 115200
+  Serial.begin(115200);
   
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
@@ -62,15 +95,70 @@ void setup() {
   espClient.setCACert(root_ca);
   mqttClient.setServer(mqtt_server, mqtt_port);
   mqttClient.setCallback(mqttCallback);
+
+  // Inicjalizacja modułu BLE w trybie skanera
+  BLEDevice::init("");
+  pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true);
+  pBLEScan->setInterval(100);
+  pBLEScan->setWindow(99);
+
   delay(1000);
+  Serial.println("STATUS:GATEWAY_READY");
+}
+
+void reconnectMqtt() {
+  // Pętla wykona się tylko jeśli Wi-Fi działa, ale MQTT padło
+  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+    Serial.println("STATUS:MQTT_RECONNECTING...");
+    
+    if (mqttClient.connect("Gateway_Test", mqtt_user, mqtt_pass)) {
+      Serial.println("STATUS:MQTT_OK_RECONNECTED");
+      mqttClient.subscribe("#");
+    } else {
+      Serial.print("STATUS:MQTT_RECONNECT_FAILED, RC=");
+      Serial.println(mqttClient.state());
+    }
+  }
 }
 
 void loop() {
-
-  if (WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
+  // Zawsze dbamy o to, żeby klient MQTT przetwarzał pakiety w tle
+  if (WiFi.status() == WL_CONNECTED) {
+    if (!mqttClient.connected()) {
+      reconnectMqtt(); // Jeśli rozłączyło, spróbuj połączyć ponownie
+    }
     mqttClient.loop();
   }
 
+  // Bezpieczne wypchnięcie danych
+  if (WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
+    if (newTemperatureAvailable) {
+      newTemperatureAvailable = false; // Reset flagi
+      
+      String topic = "dom/czujnik1/temp";
+      String payload = String(latestTemperature, 1);
+      
+      Serial.print("STATUS:PROBA_WYSYLANIA_MQTT...");
+      if (mqttClient.publish(topic.c_str(), payload.c_str())) {
+        Serial.println("SUCCESS");
+      } else {
+        Serial.println("FAILED");
+      }
+    }
+  }
+
+  // Cykliczne odpalanie skanera BLE co 5 sekund
+  if (millis() - lastBleScanTime >= BLE_SCAN_INTERVAL) {
+    lastBleScanTime = millis();
+    
+    // Skanujemy przez 1 sekundę
+    pBLEScan->start(1, false); 
+    pBLEScan->clearResults();  
+  }
+
+  // Obsługa komend z portu szeregowego
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     input.trim();
