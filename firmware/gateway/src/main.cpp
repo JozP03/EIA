@@ -5,6 +5,14 @@
 #include <BLEUtils.h>
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
+#include <Preferences.h>
+
+Preferences preferences;
+
+//zmienna określajaca tryb wifi
+// 0 - połączenie statyczne (Static)
+// 1 - połączenie dynamiczne (DHCP)
+int mode;
 
 const int WIFI_TIMEOUT_MS = 25000;
 
@@ -49,9 +57,9 @@ const char* root_ca = \
   "-----END CERTIFICATE-----\n";
 
 WiFiClientSecure espClient;
-PubSubClient mqttClient(espClient);
+PubSubClient mqttClient(espClient); // definicja mqtt
 
-BLEScan* pBLEScan;
+BLEScan* pBLEScan; //definicja BLE
 unsigned long lastBleScanTime = 0;
 const unsigned long BLE_SCAN_INTERVAL = 5000;
 
@@ -63,8 +71,9 @@ void handleConnectionRequest(String cmd);
 void handleStaticConnectionRequest(String cmd);
 void testMqttConnection();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
+bool connectToSavedWifi();
 
-// NOWE: Klasa callbacku wywoływana, gdy radio BLE coś znajdzie w powietrzu
+// Klasa callbacku wywoływana, gdy radio BLE coś znajdzie w powietrzu
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
         // Sprawdzamy czy nazwa pasuje do naszego czujnika
@@ -96,7 +105,7 @@ void setup() {
   mqttClient.setServer(mqtt_server, mqtt_port);
   mqttClient.setCallback(mqttCallback);
 
-  // Inicjalizacja modułu BLE w trybie skanera
+  // Inicjalizacja BLE w trybie skanera
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
@@ -105,6 +114,15 @@ void setup() {
   pBLEScan->setWindow(99);
 
   delay(1000);
+
+  // Próba automatycznego połączenia z zapisaną siecią
+  Serial.println("STATUS:WIFI_INIT_AUTO_CONNECT...");
+  if (connectToSavedWifi()) {
+    testMqttConnection();
+  } else {
+    Serial.println("STATUS:NO_SAVED_WIFI_OR_CONNECT_FAIL");
+  }
+
   Serial.println("STATUS:GATEWAY_READY");
 }
 
@@ -214,6 +232,8 @@ void executeWifiScan() {
 }
 
 void handleConnectionRequest(String cmd) {
+  preferences.begin("wifi", false);
+
   int separatorIndex = cmd.indexOf(';');
   
   if (separatorIndex == -1) {
@@ -236,6 +256,11 @@ void handleConnectionRequest(String cmd) {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("STATUS:OK;IP:");
     Serial.println(WiFi.localIP().toString());
+    delay(10);
+    preferences.putInt("mode", 1);
+    preferences.putString("last_ssid", ssid);
+    preferences.putString("last_password", password);
+    preferences.end();
     delay(1000);
     testMqttConnection();
   } else {
@@ -245,6 +270,8 @@ void handleConnectionRequest(String cmd) {
 }
 
 void handleStaticConnectionRequest(String cmd) {
+  preferences.begin("wifi", false);
+
   // Wycinamy nagłówek "CONN_STATIC:" (12 znaków)
   String data = cmd.substring(12); 
   
@@ -300,6 +327,16 @@ void handleStaticConnectionRequest(String cmd) {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("STATUS:OK;IP:");
     Serial.println(WiFi.localIP().toString());
+    delay(10);
+    preferences.putInt("mode", 0);
+    preferences.putString("last_ssid", ssid);
+    preferences.putString("last_password", password);
+    preferences.putString("last_ip", local_IP.toString());
+    preferences.putString("last_gateway", gateway.toString());
+    preferences.putString("last_subnet", subnet.toString());
+    preferences.end();
+    delay(1000);
+    testMqttConnection();
   } else {
     Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
@@ -337,4 +374,9 @@ void testMqttConnection() {
     Serial.print("STATUS:MQTT_ERROR_CODE:");
     Serial.println(mqttClient.state());
   }
+}
+
+bool connectToSavedWifi() {
+  // todo: do napisania
+  // odczytanie mode itd.
 }
