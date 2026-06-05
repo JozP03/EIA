@@ -101,7 +101,7 @@ public class ScanFragment extends Fragment implements UsbSerialService.Connectio
             // Rejestrujemy ten fragment jako odbiorcę wiadomości z serwisu
             usbService.setConnectionCallback(ScanFragment.this);
 
-            // Automatyczne skanowanie przy wejściu (jeśli połączono, wyśle 'scan', jeśli nie, zrobi 'initUSB')
+            // Automatyczne skanowanie przy wejściu
             startScanning();
         }
 

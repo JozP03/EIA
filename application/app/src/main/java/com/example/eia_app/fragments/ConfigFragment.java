@@ -30,7 +30,8 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
     private UsbSerialService usbService;
     private boolean isBound = false;
     private String ssid;
-    private boolean isStaticIp = true; // Domyślnie statyczne IP (zgodnie z UI)
+    private boolean isStaticIp = true;
+    private View loadingOverlay;
 
     public ConfigFragment() {
         // Required empty public constructor
@@ -67,6 +68,7 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
         View layoutStaticFields = view.findViewById(R.id.layoutStaticFields);
         android.widget.Button btnStatic = view.findViewById(R.id.btnStaticIp);
         android.widget.Button btnDhcp = view.findViewById(R.id.btnDhcp);
+        loadingOverlay = view.findViewById(R.id.loadingOverlay);
 
         btnStatic.setOnClickListener(v -> {
             isStaticIp = true;
@@ -117,6 +119,9 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
             }
 
             if (isBound && usbService != null && usbService.isConnected()) {
+                // Pokazujemy animację ładowania
+                loadingOverlay.setVisibility(View.VISIBLE);
+
                 // Wysyłamy komendę przez USB!
                 usbService.sendCommand(command);
                 Toast.makeText(getContext(), "Wysyłanie konfiguracji...", Toast.LENGTH_SHORT).show();
@@ -176,9 +181,23 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
         getActivity().runOnUiThread(() -> {
             Log.d(TAG, "Odpowiedź z ESP: " + line);
 
+            // Ukrywamy animację przy dowolnej odpowiedzi
+            if (loadingOverlay != null) {
+                loadingOverlay.setVisibility(View.GONE);
+            }
+
             if (line.startsWith("STATUS:OK")) {
-                Toast.makeText(getContext(), "Połączono pomyślnie z Wi-Fi!", Toast.LENGTH_LONG).show();
-                // Tutaj możesz cofnąć użytkownika do ekranu głównego (Dashboardu)
+                // Zamykamy port i zatrzymujemy serwis USB przed przejściem do dashboardu
+                if (usbService != null) {
+                    usbService.closePort();
+                }
+                Intent stopIntent = new Intent(getContext(), UsbSerialService.class);
+                requireActivity().stopService(stopIntent);
+
+                // Przejście do dashboardu
+                if (getView() != null) {
+                    Navigation.findNavController(getView()).navigate(R.id.action_configFragment_to_dashboardFragment);
+                }
             } else if (line.startsWith("STATUS:ERROR_TIMEOUT")) {
                 Toast.makeText(getContext(), "Błąd: Przekroczono czas połączenia", Toast.LENGTH_LONG).show();
             } else if (line.startsWith("STATUS:ERROR_FORMAT")) {

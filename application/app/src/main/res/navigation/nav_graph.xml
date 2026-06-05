@@ -46,5 +46,9 @@
         android:id="@+id/dashboardFragment"
         android:name="com.example.eia_app.fragments.DashboardFragment"
         android:label="fragment_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_dashboard" >
+        <action
+            android:id="@+id/action_dashboardFragment_to_connectionFragment"
+            app:destination="@id/connectionFragment" />
+    </fragment>
 </navigation>
