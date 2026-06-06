@@ -16,23 +16,11 @@ Preferences preferences;
 int mode;
 const int WIFI_TIMEOUT_MS = 25000;
 
-// ===== SENSOR DATA =====
-struct SensorData {
-  float temp;
-  bool available;
-};
-
-// mutex (CRITICAL SECTION)
-portMUX_TYPE tempMux = portMUX_INITIALIZER_UNLOCKED;
-
-// global data
-SensorData sensorData = {0.0, false};
-
 //mqtt zmienne
-const char* mqtt_server = "";
+const char* mqtt_server = "38c4229294ff40a4bde3f69781544bd8.s1.eu.hivemq.cloud";
 const int mqtt_port = 8883;
-const char* mqtt_user = "";
-const char* mqtt_pass = "";
+const char* mqtt_user = "gateway_esp";
+const char* mqtt_pass = "Brama@123";
 
 //certyfikat ISRG Root X1 https://letsencrypt.org/certificates/
 const char* root_ca = \
@@ -72,20 +60,25 @@ WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient); // definicja mqtt
 
 BLEScan* pBLEScan; //definicja BLE
-unsigned long lastBleScanTime = 0;
-const unsigned long BLE_SCAN_INTERVAL = 5000;
 
-volatile bool newTemperatureAvailable = false; // Flaga informująca o nowych danych
-float latestTemperature = 0.0;
 
+// Prototypy funkcji
 void executeWifiScan();
 void handleConnectionRequest(String cmd);
 void handleStaticConnectionRequest(String cmd);
-void testMqttConnection();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
 bool connectToSavedWifi();
+void reconnectMqtt();
+void bleTask(void *pvParameters);
+void mqttTask(void *pvParameters);
 
-// Klasa callbacku wywoływana, gdy radio BLE coś znajdzie w powietrzu
+struct Message {
+    float floatValue;
+};
+
+QueueHandle_t valueQueue;
+
+// Klasa callbacku wywoływana, gdy radio BLE coś znajdzie
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
 
@@ -97,12 +90,12 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
         String tempStr = data.substring(2);
         float temp = tempStr.toFloat();
 
-        portENTER_CRITICAL(&tempMux);
+        Message msg;
+        msg.floatValue = temp;
 
-        sensorData.temp = temp;
-        sensorData.available = true;
-
-        portEXIT_CRITICAL(&tempMux);
+        if (xQueueSend(valueQueue, &msg, 0) != pdPASS) {
+            Serial.println("QUEUE FULL");
+        }
 
         Serial.print("BLE_RCV: ");
         Serial.println(temp);
@@ -116,6 +109,14 @@ void setup() {
   
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
+
+  //Tworzenie kolejki do komunikacji miedzy taskami
+  valueQueue = xQueueCreate(10, sizeof(Message));
+
+  if (valueQueue == NULL) {
+      Serial.println("QUEUE CREATE FAILED");
+  }
+  
   
   espClient.setCACert(root_ca);
   mqttClient.setServer(mqtt_server, mqtt_port);
@@ -133,68 +134,32 @@ void setup() {
 
   // Próba automatycznego połączenia z zapisaną siecią
   Serial.println("STATUS:WIFI_INIT_AUTO_CONNECT...");
-  if (connectToSavedWifi()) {
-    testMqttConnection();
-  } else {
+
+  if (!connectToSavedWifi()) {
     Serial.println("STATUS:NO_SAVED_WIFI_OR_CONNECT_FAIL");
   }
 
   Serial.println("STATUS:GATEWAY_READY");
-}
+  
 
-void reconnectMqtt() {
-  // Pętla wykona się tylko jeśli Wi-Fi działa, ale MQTT padło
-  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
-    Serial.println("STATUS:MQTT_RECONNECTING...");
-    
-    if (mqttClient.connect("Gateway_Test", mqtt_user, mqtt_pass)) {
-      Serial.println("STATUS:MQTT_OK_RECONNECTED");
-      mqttClient.subscribe("#");
-    } else {
-      Serial.print("STATUS:MQTT_RECONNECT_FAILED, RC=");
-      Serial.println(mqttClient.state());
-    }
-  }
+  xTaskCreate(
+    bleTask,
+    "BLE_TASK",
+    6000,
+    NULL,
+    1,
+    NULL);
+
+  xTaskCreate(
+      mqttTask,
+      "MQTT_TASK",
+      8000,
+      NULL,
+      1,
+      NULL);
 }
 
 void loop() {
-
-  if (WiFi.status() == WL_CONNECTED) {
-    if (!mqttClient.connected()) reconnectMqtt();
-    mqttClient.loop();
-  }
-
-  float tempCopy = 0;
-  bool hasData = false;
-
-  portENTER_CRITICAL(&tempMux);
-
-  if (sensorData.available) {
-    tempCopy = sensorData.temp;
-    sensorData.available = false;
-    hasData = true;
-  }
-
-  portEXIT_CRITICAL(&tempMux);
-
-  if (hasData && WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
-
-    String topic = "dom/czujnik1/temp";
-    String payload = String(tempCopy, 1);
-
-    Serial.print("MQTT SEND: ");
-    Serial.println(payload);
-
-    mqttClient.publish(topic.c_str(), payload.c_str());
-  }
-
-  // BLE scan
-  if (millis() - lastBleScanTime >= BLE_SCAN_INTERVAL) {
-    lastBleScanTime = millis();
-
-    pBLEScan->start(1, false);
-    pBLEScan->clearResults();
-  }
 
   // serial commands
   if (Serial.available() > 0) {
@@ -212,6 +177,59 @@ void loop() {
     }
   }
 }
+
+//-- Tasks --
+void bleTask(void *pvParameters) {
+
+    while (true) {
+
+        pBLEScan->start(1, false);
+        pBLEScan->clearResults();
+
+        vTaskDelay(pdMS_TO_TICKS(5000));
+    }
+}
+
+void mqttTask(void *pvParameters) {
+    Message msg;
+    
+    // Zmienna do kontrolowania czasu
+    static unsigned long lastReconnectAttempt = 0;
+    const unsigned long reconnectInterval = 5000; 
+
+    while (true) {
+        if (WiFi.status() == WL_CONNECTED) {
+            
+            if (!mqttClient.connected()) {
+                unsigned long now = millis();
+                
+                // polaczenie po raz kolejny co 5 sekund, jesli nie jest polaczony
+                if (now - lastReconnectAttempt > reconnectInterval) {
+                    lastReconnectAttempt = now;
+                    reconnectMqtt();
+                }
+            } else {
+                //utrzymanie sesji MQTT
+                mqttClient.loop();
+
+                while (xQueueReceive(valueQueue, &msg, 0) == pdTRUE) {
+                    
+                    char payload[16];
+                    
+                    // Formatowanie zmiennej float do jednego miejsca po przecinku (np. "23.5")
+                    snprintf(payload, sizeof(payload), "%.1f", msg.floatValue);
+                    
+                    mqttClient.publish("dom/czujnik1/temp", payload);
+                }
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
+
+
+//-- Functions --
 
 void executeWifiScan() {
   // Skanujemy sieci w trybie asynchronicznym = false (blokujący)
@@ -255,6 +273,7 @@ void handleConnectionRequest(String cmd) {
   
   if (separatorIndex == -1) {
     Serial.println("STATUS:ERROR_FORMAT");
+    preferences.end();
     return;
   }
 
@@ -279,7 +298,6 @@ void handleConnectionRequest(String cmd) {
     preferences.putString("last_password", password);
     preferences.end();
     delay(1000);
-    testMqttConnection();
   } else {
     Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
@@ -353,10 +371,35 @@ void handleStaticConnectionRequest(String cmd) {
     preferences.putString("last_subnet", subnet.toString());
     preferences.end();
     delay(1000);
-    testMqttConnection();
   } else {
     Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
+  }
+}
+
+void reconnectMqtt() {
+  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
+    Serial.println("STATUS:MQTT_RECONNECTING...");
+    
+    //parametry dla statusu
+    const char* statusTopic = "dom/brama/status";
+    const char* payloadOnline = "online";
+    const char* payloadOffline = "offline";
+    
+    // Parametry: clientID, user, pass, willTopic, willQoS, willRetain, willMessage
+    if (mqttClient.connect("Gateway_Test", mqtt_user, mqtt_pass, statusTopic, 1, true, payloadOffline)) {
+      
+      Serial.println("STATUS:MQTT_OK_RECONNECTED");
+      
+      mqttClient.publish(statusTopic, payloadOnline, true);
+      
+      // todo: DO pozniejszej implementacji
+      // mqttClient.subscribe("#"); 
+      
+    } else {
+      Serial.print("STATUS:MQTT_RECONNECT_FAILED, RC=");
+      Serial.println(mqttClient.state());
+    }
   }
 }
 
@@ -368,29 +411,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-}
-
-void testMqttConnection() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("STATUS:MQTT_ERROR_NO_WIFI");
-    return;
-  }
-
-  Serial.println("STATUS:MQTT_CONNECTING");
-  
-  // Próba połączenia z chmurą
-  if (mqttClient.connect("Gateway_Test", mqtt_user, mqtt_pass)) {
-    Serial.println("STATUS:MQTT_OK");
-    
-    // testowa wiadomość
-    mqttClient.publish("dom/brama/status", "{\"brama\":\"online\"}");
-    
-    mqttClient.subscribe("#");
-    Serial.println("STATUS:MQTT_SUBSCRIBED");
-  } else {
-    Serial.print("STATUS:MQTT_ERROR_CODE:");
-    Serial.println(mqttClient.state());
-  }
 }
 
 bool connectToSavedWifi() {
