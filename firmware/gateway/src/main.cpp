@@ -12,9 +12,21 @@ Preferences preferences;
 //zmienna określajaca tryb wifi
 // 0 - połączenie statyczne (Static)
 // 1 - połączenie dynamiczne (DHCP)
+// WiFi mode
 int mode;
-
 const int WIFI_TIMEOUT_MS = 25000;
+
+// ===== SENSOR DATA =====
+struct SensorData {
+  float temp;
+  bool available;
+};
+
+// mutex (CRITICAL SECTION)
+portMUX_TYPE tempMux = portMUX_INITIALIZER_UNLOCKED;
+
+// global data
+SensorData sensorData = {0.0, false};
 
 //mqtt zmienne
 const char* mqtt_server = "";
@@ -75,24 +87,28 @@ bool connectToSavedWifi();
 
 // Klasa callbacku wywoływana, gdy radio BLE coś znajdzie w powietrzu
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice advertisedDevice) {
-        // Sprawdzamy czy nazwa pasuje do naszego czujnika
-        if (advertisedDevice.getName() == "ESP_C3_TEMP") {
-            String data = advertisedDevice.getManufacturerData().c_str();
-            
-            // Sprawdzamy czy dane zaczynają się od "T:"
-            if (data.startsWith("T:")) {
-                String tempStr = data.substring(2);
-                
-                // Zapisujemy dane do bezpiecznych zmiennych globalnych
-                latestTemperature = tempStr.toFloat();
-                newTemperatureAvailable = true; 
-                
-                Serial.print("BLE_RCV: Wykryto temperaturę: ");
-                Serial.println(latestTemperature);
-            }
-        }
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
+
+    if (advertisedDevice.getName() == "ESP_C3_TEMP") {
+
+      String data = advertisedDevice.getManufacturerData().c_str();
+
+      if (data.startsWith("T:")) {
+        String tempStr = data.substring(2);
+        float temp = tempStr.toFloat();
+
+        portENTER_CRITICAL(&tempMux);
+
+        sensorData.temp = temp;
+        sensorData.available = true;
+
+        portEXIT_CRITICAL(&tempMux);
+
+        Serial.print("BLE_RCV: ");
+        Serial.println(temp);
+      }
     }
+  }
 };
 
 void setup() {
@@ -142,41 +158,45 @@ void reconnectMqtt() {
 }
 
 void loop() {
-  // Zawsze dbamy o to, żeby klient MQTT przetwarzał pakiety w tle
+
   if (WiFi.status() == WL_CONNECTED) {
-    if (!mqttClient.connected()) {
-      reconnectMqtt(); // Jeśli rozłączyło, spróbuj połączyć ponownie
-    }
+    if (!mqttClient.connected()) reconnectMqtt();
     mqttClient.loop();
   }
 
-  // Bezpieczne wypchnięcie danych
-  if (WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
-    if (newTemperatureAvailable) {
-      newTemperatureAvailable = false; // Reset flagi
-      
-      String topic = "dom/czujnik1/temp";
-      String payload = String(latestTemperature, 1);
-      
-      Serial.print("STATUS:PROBA_WYSYLANIA_MQTT...");
-      if (mqttClient.publish(topic.c_str(), payload.c_str())) {
-        Serial.println("SUCCESS");
-      } else {
-        Serial.println("FAILED");
-      }
-    }
+  float tempCopy = 0;
+  bool hasData = false;
+
+  portENTER_CRITICAL(&tempMux);
+
+  if (sensorData.available) {
+    tempCopy = sensorData.temp;
+    sensorData.available = false;
+    hasData = true;
   }
 
-  // Cykliczne odpalanie skanera BLE co 5 sekund
+  portEXIT_CRITICAL(&tempMux);
+
+  if (hasData && WiFi.status() == WL_CONNECTED && mqttClient.connected()) {
+
+    String topic = "dom/czujnik1/temp";
+    String payload = String(tempCopy, 1);
+
+    Serial.print("MQTT SEND: ");
+    Serial.println(payload);
+
+    mqttClient.publish(topic.c_str(), payload.c_str());
+  }
+
+  // BLE scan
   if (millis() - lastBleScanTime >= BLE_SCAN_INTERVAL) {
     lastBleScanTime = millis();
-    
-    // Skanujemy przez 1 sekundę
-    pBLEScan->start(1, false); 
-    pBLEScan->clearResults();  
+
+    pBLEScan->start(1, false);
+    pBLEScan->clearResults();
   }
 
-  // Obsługa komend z portu szeregowego
+  // serial commands
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     input.trim();
@@ -189,9 +209,6 @@ void loop() {
     }
     else if (input.startsWith("CONN_STATIC:")) {
       handleStaticConnectionRequest(input);
-    }
-    else {
-      Serial.println("STATUS:UNKNOWN_COMMAND");
     }
   }
 }
@@ -377,6 +394,64 @@ void testMqttConnection() {
 }
 
 bool connectToSavedWifi() {
-  // todo: do napisania
-  // odczytanie mode itd.
+  preferences.begin("wifi", false);
+  mode = preferences.getInt("mode", -1);
+
+  if (mode == -1) {
+    Serial.println("STATUS:NO_SAVED_WIFI");
+    preferences.end();
+    return false;
+  }
+
+  String ssid = preferences.getString("last_ssid", "");
+  String password = preferences.getString("last_password", "");
+
+  if (ssid == "") {
+    Serial.println("STATUS:NO_SAVED_WIFI");
+    preferences.end();
+    return false;
+  }
+
+  if (mode == 0) {
+    // Statyczne połączenie
+    String ip = preferences.getString("last_ip", "");
+    String gateway = preferences.getString("last_gateway", "");
+    String subnet = preferences.getString("last_subnet", "");
+
+    if (ip == "" || gateway == "" || subnet == "") {
+      Serial.println("STATUS:INCOMPLETE_STATIC_CONFIG");
+      preferences.end();
+      return false;
+    }
+
+    IPAddress local_IP, local_gateway, local_subnet;
+    
+    if (!local_IP.fromString(ip) || !local_gateway.fromString(gateway) || !local_subnet.fromString(subnet)) {
+      Serial.println("STATUS:ERROR_IP_PARSING");
+      preferences.end();
+      return false;
+    }
+
+    WiFi.config(local_IP, local_gateway, local_subnet);
+  }
+
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  unsigned long startAttemptTime = millis();
+
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS) {
+    delay(500);
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("STATUS:WIFI_AUTO_CONNECTED;IP:");
+    Serial.println(WiFi.localIP().toString());
+    preferences.end();
+    return true;
+  } else {
+    Serial.println("STATUS:WIFI_AUTO_CONNECT_FAILED");
+    WiFi.disconnect();
+    preferences.end();
+    return false;
+  }
 }
