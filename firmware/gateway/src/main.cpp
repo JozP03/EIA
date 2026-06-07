@@ -17,10 +17,10 @@ int mode;
 const int WIFI_TIMEOUT_MS = 25000;
 
 //mqtt zmienne
-const char* mqtt_server = "38c4229294ff40a4bde3f69781544bd8.s1.eu.hivemq.cloud";
+const char* mqtt_server = "";
 const int mqtt_port = 8883;
-const char* mqtt_user = "gateway_esp";
-const char* mqtt_pass = "Brama@123";
+const char* mqtt_user = "";
+const char* mqtt_pass = "";
 
 //certyfikat ISRG Root X1 https://letsencrypt.org/certificates/
 const char* root_ca = \
@@ -159,6 +159,22 @@ void setup() {
       NULL);
 }
 
+void executeFactoryReset() {
+  Serial.println("STATUS:CLEARING_PREFERENCES...");
+
+  preferences.begin("wifi", false);
+  
+  preferences.clear(); 
+  
+  preferences.end();
+  
+  Serial.println("STATUS:PREFERENCES_CLEARED. REBOOTING IN 2 SECONDS...");
+  delay(2000);
+  
+  // Funkcja restartująca
+  ESP.restart();
+}
+
 void loop() {
 
   // serial commands
@@ -174,6 +190,9 @@ void loop() {
     }
     else if (input.startsWith("CONN_STATIC:")) {
       handleStaticConnectionRequest(input);
+    }
+    else if (input.startsWith("RESET")) {
+      executeFactoryReset();
     }
   }
 }
@@ -345,8 +364,10 @@ void handleStaticConnectionRequest(String cmd) {
     return;
   }
 
+  IPAddress dns(8, 8, 8, 8);
+
   // Konfiguracja statycznego IP w ESP32
-  if (!WiFi.config(local_IP, gateway, subnet)) {
+  if (!WiFi.config(local_IP, gateway, subnet, dns)) {
     Serial.println("STATUS:ERROR_CONFIG_FAILED");
     return;
   }
@@ -445,6 +466,7 @@ bool connectToSavedWifi() {
     }
 
     IPAddress local_IP, local_gateway, local_subnet;
+    IPAddress dns(8, 8, 8, 8);
     
     if (!local_IP.fromString(ip) || !local_gateway.fromString(gateway) || !local_subnet.fromString(subnet)) {
       Serial.println("STATUS:ERROR_IP_PARSING");
@@ -452,7 +474,7 @@ bool connectToSavedWifi() {
       return false;
     }
 
-    WiFi.config(local_IP, local_gateway, local_subnet);
+    WiFi.config(local_IP, local_gateway, local_subnet, dns);
   }
 
   WiFi.begin(ssid.c_str(), password.c_str());

@@ -181,6 +181,10 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
         getActivity().runOnUiThread(() -> {
             Log.d(TAG, "Odpowiedź z ESP: " + line);
 
+            // zapisanie flagi do pliku
+            android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE);
+            prefs.edit().putBoolean("is_configured", true).apply();
+
             // Ukrywamy animację przy dowolnej odpowiedzi
             if (loadingOverlay != null) {
                 loadingOverlay.setVisibility(View.GONE);
