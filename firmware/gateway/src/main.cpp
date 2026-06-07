@@ -17,10 +17,10 @@ int mode;
 const int WIFI_TIMEOUT_MS = 25000;
 
 //mqtt zmienne
-const char* mqtt_server = "38c4229294ff40a4bde3f69781544bd8.s1.eu.hivemq.cloud";
+const char* mqtt_server = "";
 const int mqtt_port = 8883;
-const char* mqtt_user = "gateway_esp";
-const char* mqtt_pass = "Brama@123";
+const char* mqtt_user = "";
+const char* mqtt_pass = "";
 
 //certyfikat ISRG Root X1 https://letsencrypt.org/certificates/
 const char* root_ca = \
