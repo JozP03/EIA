@@ -1,5 +1,5 @@
 # EIA
-ESP iot aplication
+ESP iot aplication with software
 
 # Libraries
 [usb-serial-for-android](https://github.com/mik3y/usb-serial-for-android)  
