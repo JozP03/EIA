@@ -12,25 +12,34 @@ public class MqttRepository {
     private static final String TAG = "MqttRepository";
     private static MqttRepository instance;
     private final MutableLiveData<Float> messageStream = new MutableLiveData<>();
+    private final MutableLiveData<String> statusStream = new MutableLiveData<>();
 
-    //testowe zmienne todo: Wpisywanie powinno być w ustawieniach. Przypisywanie do zmiennych
-    String username = "";
-    String password = "";
-    String host = "";
-    // usunac pozniej
-    Mqtt5AsyncClient client = MqttClient.builder()
-            .useMqttVersion5()
-            .identifier("app" + UUID.randomUUID().toString())
-            .serverHost(host) //adress mqtt brokera
-            .serverPort(8883) //port tls
-            .sslWithDefaultConfig()
-            .buildAsync();
-
+    private String username = "";
+    private String password = "";
+    private Mqtt5AsyncClient client;
 
     private MqttRepository(){
     }
 
+    public void configure(String host, String username, String password) {
+        this.username = username;
+        this.password = password;
+
+        client = MqttClient.builder()
+                .useMqttVersion5()
+                .identifier("app" + UUID.randomUUID().toString())
+                .serverHost(host)
+                .serverPort(8883)
+                .sslWithDefaultConfig()
+                .buildAsync();
+    }
+
     public void connectToBroker(){
+        if (client == null) {
+            Log.e(TAG, "Klient MQTT nie został skonfigurowany!");
+            return;
+        }
+
         client.connectWith()
                 .simpleAuth()
                 .username(username)
@@ -68,23 +77,38 @@ public class MqttRepository {
         }
     }
 
-    public void subscribeTopics(){
+    public void subscribeTopics() {
+        // Subskrypcja na dane (np. dom/czujnik1/temp)
         client.subscribeWith()
-                .topicFilter("#") //narazie testowo # - wszystkie
-                .callback(mqtt5Publish -> {
-                    String payload = new String(mqtt5Publish.getPayloadAsBytes());
-
-                    try{
+                .topicFilter("dom/+/temp")
+                .callback(publish -> {
+                    String payload = new String(publish.getPayloadAsBytes());
+                    try {
                         float value = Float.parseFloat(payload.trim());
                         messageStream.postValue(value);
-                    }catch (NumberFormatException e){
-                        Log.e(TAG,"Błąd dekodowania: " + e.getMessage());
+                    } catch (NumberFormatException e) {
+                        Log.e(TAG,"Błąd dekodowania danych: " + e.getMessage());
                     }
+                })
+                .send();
+
+        // Subskrypcja na statusy (np. dom/brama/status)
+        client.subscribeWith()
+                .topicFilter("dom/+/status")
+                .callback(publish -> {
+                    String status = new String(publish.getPayloadAsBytes());
+                    String topic = publish.getTopic().toString();
+                    Log.d(TAG, "Status z " + topic + ": " + status);
+                    statusStream.postValue(status);
                 })
                 .send();
     }
 
     public LiveData<Float> getMessageStream(){
         return messageStream;
+    }
+
+    public LiveData<String> getStatusStream() {
+        return statusStream;
     }
 }
