@@ -13,6 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.eia_app.R;
 import com.example.eia_app.repositories.MqttRepository;
@@ -45,6 +46,25 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+
+        // reset konfiguracji testowo na przycisku +
+        view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Resetowanie konfiguracji")
+                    .setMessage("Czy na pewno chcesz usunąć ustawienia i skonfigurować urządzenie ponownie?")
+                    .setPositiveButton("Tak", (dialog, which) -> {
+                        requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE)
+                                .edit().putBoolean("is_configured", false).apply();
+
+                        MqttRepository.getInstance().disconnectFromBroker();
+
+                        androidx.navigation.Navigation.findNavController(view)
+                                .navigate(R.id.action_dashboardFragment_to_connectionFragment);
+                    })
+                    .setNegativeButton("Anuluj", null)
+                    .show();
+        });
 
         TextView textView = view.findViewById(R.id.tvTemperature);
         viewModel.getTemperature().observe(getViewLifecycleOwner(), temperature -> {
