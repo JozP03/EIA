@@ -42,11 +42,13 @@
             app:layout_constraintTop_toTopOf="@id/tvDeviceName">
 
             <View
+                android:id="@+id/tvStatusIco"
                 android:layout_width="6dp"
                 android:layout_height="6dp"
                 android:background="@color/accent_green" />
 
             <TextView
+                android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
