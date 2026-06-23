@@ -71,6 +71,10 @@ public class ConnectionFragment extends Fragment {
                 usbService.initUSB();
             }
         });
+
+        view.findViewById(R.id.btnSkipToDashboard).setOnClickListener(v -> {
+            Navigation.findNavController(view).navigate(R.id.action_connectionFragment_to_dashboardFragment);
+        });
     }
 
     private void setupCallback() {

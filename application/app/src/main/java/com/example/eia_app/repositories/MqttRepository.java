@@ -22,6 +22,10 @@ public class MqttRepository {
     }
 
     public void configure(String host, String username, String password) {
+        if (host == null || host.isEmpty()) {
+            Log.e(TAG, "Server host cannot be null or empty.");
+            return;
+        }
         this.username = username;
         this.password = password;
 
@@ -57,8 +61,10 @@ public class MqttRepository {
     }
 
     public void disconnectFromBroker(){
-        Log.e(TAG,"Rozłączono z MQTT");
-        client.disconnect();
+        if (client != null) {
+            Log.e(TAG,"Rozłączono z MQTT");
+            client.disconnect();
+        }
     }
 
     public static synchronized MqttRepository getInstance(){
@@ -78,6 +84,10 @@ public class MqttRepository {
     }
 
     public void subscribeTopics() {
+        if (client == null) {
+            Log.e(TAG, "Cannot subscribe: Client is null");
+            return;
+        }
         // Subskrypcja na dane (np. dom/czujnik1/temp)
         client.subscribeWith()
                 .topicFilter("dom/+/temp")

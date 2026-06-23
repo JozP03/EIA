@@ -49,7 +49,7 @@ public class DashboardFragment extends Fragment {
 
 
         // reset konfiguracji testowo na przycisku +
-        view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
+        view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
             new android.app.AlertDialog.Builder(requireContext())
                     .setTitle("Resetowanie konfiguracji")
                     .setMessage("Czy na pewno chcesz usunąć ustawienia i skonfigurować urządzenie ponownie?")
