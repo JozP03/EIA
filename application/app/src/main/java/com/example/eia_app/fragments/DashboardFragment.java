@@ -8,6 +8,9 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
+import androidx.navigation.ui.NavigationUI;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -47,6 +50,9 @@ public class DashboardFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.dashboard_nav_view);
+        NavController navController = Navigation.findNavController(view);
+        NavigationUI.setupWithNavController(navigationView, navController);
 
         // reset konfiguracji testowo na przycisku +
         view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
@@ -65,6 +71,27 @@ public class DashboardFragment extends Fragment {
                     .setNegativeButton("Anuluj", null)
                     .show();
         });
+
+        // Otwieranie panelu bocznego
+        view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
+            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
+            if (drawer != null) {
+                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+            }
+        });
+
+        // przysk o aplikacji
+        View navAbout = view.findViewById(R.id.aboutFragment);
+        if (navAbout != null) {
+            navAbout.setOnClickListener(v -> {
+                androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
+                if (drawer != null) {
+                    drawer.closeDrawers();
+                }
+                Navigation.findNavController(view).navigate(R.id.aboutFragment);
+            });
+        }
+
 
         TextView textView = view.findViewById(R.id.tvTemperature);
         viewModel.getTemperature().observe(getViewLifecycleOwner(), temperature -> {

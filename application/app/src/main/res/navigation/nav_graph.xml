@@ -54,4 +54,13 @@
             android:id="@+id/action_dashboardFragment_to_connectionFragment"
             app:destination="@id/connectionFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="com.example.eia_app.fragments.SettingsFragment"
+        android:label="SettingsFragment" />
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="com.example.eia_app.AboutFragment"
+        android:label="fragment_about"
+        tools:layout="@layout/fragment_about" />
 </navigation>
