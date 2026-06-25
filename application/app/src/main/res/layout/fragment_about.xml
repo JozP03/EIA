@@ -1,14 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".AboutFragment">
+    android:background="@color/white_bg"
+    android:padding="24dp">
 
-    <!-- TODO: Update blank fragment layout -->
+    <ImageView
+        android:id="@+id/ivAppLogo"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="48dp"
+        android:src="@mipmap/ic_launcher_round"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <TextView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:text="@string/hello_blank_fragment" />
+        android:id="@+id/tvAppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="EIA.AI"
+        android:textColor="@color/black_main"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ivAppLogo" />
 
-</FrameLayout>
+    <TextView
+        android:id="@+id/tvVersion"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Wersja 1.0.0"
+        android:textColor="@color/text_muted"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAppName" />
+
+    <TextView
+        android:id="@+id/tvDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:text="Lorem ipsum"
+        android:textColor="@color/text_main"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tvVersion"
+        tools:layout_editor_absoluteX="24dp" />
+
+    <View
+        android:id="@+id/dividerAbout"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="32dp"
+        android:background="@color/text_muted"
+        android:alpha="0.2"
+        app:layout_constraintTop_toBottomOf="@id/tvDescription" />
+
+    <TextView
+        android:id="@+id/tvAuthorLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Autorzy"
+        android:textColor="@color/black_main"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/dividerAbout" />
+
+    <TextView
+        android:id="@+id/tvAuthors"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Brak"
+        android:textColor="@color/text_main"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvAuthorLabel" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        android:text="© 2024."
+        android:textColor="@color/text_muted"
+        android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
