@@ -57,7 +57,8 @@
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.example.eia_app.fragments.SettingsFragment"
-        android:label="SettingsFragment" />
+        android:label="@layout/fragment_settings"
+        tools:layout="@layout/fragment_settings" />
     <fragment
         android:id="@+id/aboutFragment"
         android:name="com.example.eia_app.fragments.AboutFragment"

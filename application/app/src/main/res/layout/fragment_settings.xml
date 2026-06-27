@@ -70,7 +70,7 @@
         tools:layout_editor_absoluteX="24dp">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etMqttTopic"
+            android:id="@+id/etMqttUser"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="text" />
@@ -94,6 +94,81 @@
             android:inputType="textPassword" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <TextView
+        android:id="@+id/tvAiSectionHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="32dp"
+        android:text="KONFIGURACJA AI (OPCJONALNIE)"
+        android:textColor="@color/accent_blue"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        app:layout_constraintTop_toBottomOf="@id/tilMqttPassword"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <View
+        android:id="@+id/aiDivider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:background="@color/accent_blue"
+        android:alpha="0.3"
+        app:layout_constraintTop_toBottomOf="@id/tvAiSectionHeader" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilAiProvider"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:hint="Dostawca AI"
+        app:expandedHintEnabled="false"
+        app:layout_constraintTop_toBottomOf="@id/aiDivider">
+
+        <AutoCompleteTextView
+            android:id="@+id/actvAiProvider"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="none"
+            tools:ignore="LabelFor" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilAiBaseUrl"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Adres Endpointu API"
+        app:expandedHintEnabled="false"
+        app:layout_constraintTop_toBottomOf="@id/tilAiProvider">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etAiBaseUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textUri" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilAiApiKey"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Klucz API AI"
+        app:expandedHintEnabled="false"
+        app:passwordToggleEnabled="true"
+        app:layout_constraintTop_toBottomOf="@id/tilAiBaseUrl">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etAiApiKey"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSaveSettings"
         android:layout_width="match_parent"
@@ -103,6 +178,6 @@
         android:textColor="@color/white_bg"
         app:backgroundTint="@color/black_main"
         app:cornerRadius="12dp"
-        app:layout_constraintTop_toBottomOf="@id/tilMqttPassword" />
+        app:layout_constraintTop_toBottomOf="@id/tilAiApiKey" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
