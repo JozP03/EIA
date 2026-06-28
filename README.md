@@ -4,5 +4,5 @@ ESP iot aplication with software
 # Libraries
 [usb-serial-for-android](https://github.com/mik3y/usb-serial-for-android)  
 [pubsubclient](https://github.com/knolleary/pubsubclient)  
-[hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client)
+[hivemq-mqtt-client](https://github.com/hivemq/hivemq-mqtt-client)  
 [retrofit](https://github.com/square/retrofit)  
