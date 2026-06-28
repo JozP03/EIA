@@ -112,7 +112,7 @@
                 android:layout_marginBottom="8dp" />
 
             <TextView
-                android:id="@+id/aboutFragment"
+                android:id="@+id/btnNavAbout"
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:background="?android:attr/selectableItemBackground"

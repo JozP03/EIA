@@ -2,7 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
         <item
-            android:id="@+id/nav_home"
+            android:id="@+id/dashboardFragment"
             android:icon="@android:drawable/ic_menu_today"
             android:title="Dashboard" />
         <item

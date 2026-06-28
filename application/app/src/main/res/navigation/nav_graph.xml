@@ -57,10 +57,11 @@
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.example.eia_app.fragments.SettingsFragment"
-        android:label="SettingsFragment" />
+        android:label="Ustawienia"
+        tools:layout="@layout/fragment_settings" />
     <fragment
         android:id="@+id/aboutFragment"
-        android:name="com.example.eia_app.AboutFragment"
-        android:label="fragment_about"
+        android:name="com.example.eia_app.fragments.AboutFragment"
+        android:label="O aplikacji"
         tools:layout="@layout/fragment_about" />
 </navigation>
