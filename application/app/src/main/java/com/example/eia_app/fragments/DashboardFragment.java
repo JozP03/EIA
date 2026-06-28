@@ -52,7 +52,20 @@ public class DashboardFragment extends Fragment {
 
         com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.dashboard_nav_view);
         NavController navController = Navigation.findNavController(view);
-        NavigationUI.setupWithNavController(navigationView, navController);
+        
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
+            
+            if (id == R.id.settingsFragment) {
+                navController.navigate(R.id.settingsFragment);
+            }
+            
+            if (drawer != null) {
+                drawer.closeDrawers();
+            }
+            return true;
+        });
 
         // reset konfiguracji testowo na przycisku +
         view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
@@ -81,14 +94,14 @@ public class DashboardFragment extends Fragment {
         });
 
         // przysk o aplikacji
-        View navAbout = view.findViewById(R.id.aboutFragment);
+        View navAbout = view.findViewById(R.id.btnNavAbout);
         if (navAbout != null) {
             navAbout.setOnClickListener(v -> {
                 androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
                 if (drawer != null) {
                     drawer.closeDrawers();
                 }
-                Navigation.findNavController(view).navigate(R.id.aboutFragment);
+                navController.navigate(R.id.aboutFragment);
             });
         }
 

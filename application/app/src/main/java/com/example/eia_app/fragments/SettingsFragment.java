@@ -39,6 +39,44 @@ public class SettingsFragment extends Fragment {
         mqtt = MqttRepository.getInstance();
         prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);
 
+        // Nawigacja boczna
+        com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.settings_nav_view);
+        androidx.navigation.NavController navController = androidx.navigation.Navigation.findNavController(view);
+        
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
+            
+            if (id == R.id.dashboardFragment) {
+                navController.navigate(R.id.dashboardFragment);
+            }
+            
+            if (drawer != null) {
+                drawer.closeDrawers();
+            }
+            return true;
+        });
+
+        // Otwieranie panelu bocznego
+        view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
+            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
+            if (drawer != null) {
+                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+            }
+        });
+
+        // Obsługa kliknięcia w "O aplikacji" na dole panelu bocznego
+        View navAbout = view.findViewById(R.id.btnNavAbout);
+        if (navAbout != null) {
+            navAbout.setOnClickListener(v -> {
+                androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
+                if (drawer != null) {
+                    drawer.closeDrawers();
+                }
+                navController.navigate(R.id.aboutFragment);
+            });
+        }
+
         etMqttHost = view.findViewById(R.id.etMqttHost);
         etMqttUser = view.findViewById(R.id.etMqttUser);
         etMqttPassword = view.findViewById(R.id.etMqttPassword);
