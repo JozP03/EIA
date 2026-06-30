@@ -216,7 +216,7 @@
                     android:id="@+id/btnSaveSettings"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
-                    android:layout_marginTop="32dp"
+                    android:layout_marginTop="16dp"
                     android:text="Zapisz ustawienia"
                     android:textColor="@color/white_bg"
                     app:backgroundTint="@color/black_main"

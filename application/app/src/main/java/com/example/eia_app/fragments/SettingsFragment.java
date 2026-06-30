@@ -184,9 +184,5 @@ public class SettingsFragment extends Fragment {
         mqtt.connectToBroker();
 
         Toast.makeText(getContext(), "Ustawienia zapisane", Toast.LENGTH_SHORT).show();
-        
-        if (getActivity() != null) {
-            getActivity().getSupportFragmentManager().popBackStack();
-        }
     }
 }
