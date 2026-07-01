@@ -12,6 +12,8 @@ import androidx.navigation.NavController;
 import androidx.navigation.NavGraph;
 import androidx.navigation.fragment.NavHostFragment;
 
+import com.example.eia_app.repositories.MqttRepository;
+
 public class MainActivity extends AppCompatActivity {
 
     @Override
@@ -34,6 +36,14 @@ public class MainActivity extends AppCompatActivity {
             NavGraph navGraph = navController.getNavInflater().inflate(R.navigation.nav_graph);
 
             SharedPreferences prefs = getSharedPreferences("EIA_PREFS", MODE_PRIVATE);
+
+            String mqttHost = prefs.getString("mqtt_host", "broker.hivemq.com");
+            String mqttUser = prefs.getString("mqtt_user", "");
+            String mqttPass = prefs.getString("mqtt_pass", "");
+            
+            MqttRepository mqtt = MqttRepository.getInstance();
+            mqtt.configure(mqttHost, mqttUser, mqttPass);
+
             boolean isConfigured = prefs.getBoolean("is_configured", false);
 
             if (isConfigured) {
