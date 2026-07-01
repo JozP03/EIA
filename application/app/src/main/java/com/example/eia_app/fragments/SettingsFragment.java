@@ -77,6 +77,26 @@ public class SettingsFragment extends Fragment {
             });
         }
 
+        //przycisk reset
+        view.findViewById(R.id.btnReset).setOnClickListener(v -> {
+            new android.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Resetowanie konfiguracji")
+                    .setMessage("Czy na pewno chcesz usunąć ustawienia i skonfigurować wszystkie urządzenia ponownie?")
+                    .setPositiveButton("Tak", (dialog, which) -> {
+                        requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE)
+                                .edit()
+                                .clear()
+                                .apply();
+
+                        MqttRepository.getInstance().disconnectFromBroker();
+
+                        androidx.navigation.Navigation.findNavController(view)
+                                .navigate(R.id.connectionFragment);
+                    })
+                    .setNegativeButton("Anuluj", null)
+                    .show();
+        });
+
         etMqttHost = view.findViewById(R.id.etMqttHost);
         etMqttUser = view.findViewById(R.id.etMqttUser);
         etMqttPassword = view.findViewById(R.id.etMqttPassword);

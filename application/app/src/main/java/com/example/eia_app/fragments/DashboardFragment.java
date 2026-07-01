@@ -69,23 +69,10 @@ public class DashboardFragment extends Fragment {
 
         // reset konfiguracji testowo na przycisku +
         view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
-            new android.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Resetowanie konfiguracji")
-                    .setMessage("Czy na pewno chcesz usunąć ustawienia i skonfigurować urządzenie ponownie?")
-                    .setPositiveButton("Tak", (dialog, which) -> {
-                        requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE)
-                                .edit().putBoolean("is_configured", false).apply();
 
-                        MqttRepository.getInstance().disconnectFromBroker();
-
-                        androidx.navigation.Navigation.findNavController(view)
-                                .navigate(R.id.action_dashboardFragment_to_connectionFragment);
-                    })
-                    .setNegativeButton("Anuluj", null)
-                    .show();
         });
 
-        // Otwieranie panelu bocznego
+        //panel boczny
         view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
             androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
             if (drawer != null) {
