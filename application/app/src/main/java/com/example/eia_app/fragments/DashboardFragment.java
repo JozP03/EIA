@@ -67,7 +67,7 @@ public class DashboardFragment extends Fragment {
             return true;
         });
 
-        // reset konfiguracji testowo na przycisku +
+        // przycisk +
         view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
 
         });

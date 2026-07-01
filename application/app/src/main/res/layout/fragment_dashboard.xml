@@ -83,7 +83,7 @@
 
             <include
                 android:id="@+id/mockDeviceNode1"
-                layout="@layout/item_dashboard_device" />
+                layout="@layout/item_device" />
 
         </LinearLayout>
 
