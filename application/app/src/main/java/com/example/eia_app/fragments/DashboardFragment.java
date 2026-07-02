@@ -91,30 +91,8 @@ public class DashboardFragment extends Fragment {
                 navController.navigate(R.id.aboutFragment);
             });
         }
-
-
-        TextView textView = view.findViewById(R.id.tvTemperature);
-        viewModel.getTemperature().observe(getViewLifecycleOwner(), temperature -> {
-            if(temperature != null) {
-                textView.setText(String.format(Locale.US, "%.2f °C", temperature));
-            }
-        });
-
-        TextView statusTextView = view.findViewById(R.id.tvStatus);
-        View statusIconView = view.findViewById(R.id.tvStatusIco);
-        viewModel.getStatus().observe(getViewLifecycleOwner(), status -> {
-            if(status != null) {
-                if(status.equalsIgnoreCase("ONLINE")){
-                    statusTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.accent_green));
-                    statusIconView.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.accent_green));
-                } else {
-                    statusTextView.setTextColor(ContextCompat.getColor(requireContext(), R.color.accent_red));
-                    statusIconView.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.accent_red));
-                }
-                statusTextView.setText(status);
-            }
-        });
     }
+
     @Override
     public void onDestroy() {
 
