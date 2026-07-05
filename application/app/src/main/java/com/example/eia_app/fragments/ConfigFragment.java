@@ -83,8 +83,7 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
             isStaticIp = false;
             layoutStaticFields.setVisibility(View.GONE);
             btnDhcp.setBackgroundResource(R.drawable.bg_toggle_right);
-            btnDhcp.setTextColor(getResources().getColor(R.color.white_bg, null)); // Tu pewnie powinien być kolor aktywny, ale bg_toggle_right może go ustawiać
-            // Naprawa kolorów dla DHCP (uproszczona)
+            btnDhcp.setTextColor(getResources().getColor(R.color.white_bg, null));
             btnStatic.setBackgroundResource(R.drawable.bg_toggle_left);
             btnStatic.setTextColor(getResources().getColor(R.color.text_muted, null));
         });
@@ -114,15 +113,13 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
                 // Format: CONN_STATIC:SSID;Haslo;IP;Brama;Maska
                 command = "CONN_STATIC:" + ssid + ";" + password + ";" + ip + ";" + gateway + ";" + subnet + "\n";
             } else {
-                // Format dla DHCP (założenie)
+                // Format dla DHCP
                 command = "CONN_DHCP:" + ssid + ";" + password + "\n";
             }
 
             if (isBound && usbService != null && usbService.isConnected()) {
-                // Pokazujemy animację ładowania
                 loadingOverlay.setVisibility(View.VISIBLE);
 
-                // Wysyłamy komendę przez USB!
                 usbService.sendCommand(command);
                 Toast.makeText(getContext(), "Wysyłanie konfiguracji...", Toast.LENGTH_SHORT).show();
             } else {
@@ -138,10 +135,8 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
             usbService = binder.getService();
             isBound = true;
 
-            // Rejestrujemy ten fragment, aby nasłuchiwać odpowiedzi z ESP (np. STATUS:OK)
             usbService.setConnectionCallback(ConfigFragment.this);
 
-            // Jeśli wejdziemy tu, a urządzenie z jakiegoś powodu zgłasza brak połączenia, spróbujmy je zainicjować
             if (!usbService.isConnected()) {
                 Log.d(TAG, "Urządzenie zgłasza brak połączenia w ConfigFragment, inicjalizacja...");
                 usbService.initUSB();
@@ -185,13 +180,12 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
             android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE);
             prefs.edit().putBoolean("is_configured", true).apply();
 
-            // Ukrywamy animację przy dowolnej odpowiedzi
             if (loadingOverlay != null) {
                 loadingOverlay.setVisibility(View.GONE);
             }
 
             if (line.startsWith("STATUS:OK")) {
-                // Zamykamy port i zatrzymujemy serwis USB przed przejściem do dashboardu
+                // Zamykamy port i zatrzymujemy serwis USB
                 if (usbService != null) {
                     usbService.closePort();
                 }

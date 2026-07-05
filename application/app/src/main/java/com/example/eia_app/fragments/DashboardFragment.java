@@ -69,7 +69,7 @@ public class DashboardFragment extends Fragment {
 
         // przycisk +
         view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
-
+            navController.navigate(R.id.action_dashboardFragment_to_connectionFragment);
         });
 
         //panel boczny
