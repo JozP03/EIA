@@ -21,6 +21,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.eia_app.R;
+import com.example.eia_app.models.Device;
 import com.example.eia_app.services.UsbSerialService;
 
 
@@ -185,6 +186,24 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
             }
 
             if (line.startsWith("STATUS:OK")) {
+                // Wyciąganie ID (gate_MAC)
+                String deviceId = "unknown_gate";
+                if (line.contains("ID:")) {
+                    String[] parts = line.split(";");
+                    for (String part : parts) {
+                        if (part.startsWith("ID:")) {
+                            deviceId = part.substring(3); // Pobieramy wszystko po "ID:"
+                        }
+                    }
+                }
+
+                // Dodanie urządzenia do listy
+                com.example.eia_app.viewModels.DashboardViewModel viewModel = 
+                        new androidx.lifecycle.ViewModelProvider(requireActivity()).get(com.example.eia_app.viewModels.DashboardViewModel.class);
+
+                Device newDevice = new Device(deviceId, "Bramka " + ssid);
+                viewModel.saveDevice(newDevice);
+
                 // Zamykamy port i zatrzymujemy serwis USB
                 if (usbService != null) {
                     usbService.closePort();

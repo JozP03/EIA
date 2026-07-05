@@ -39,7 +39,6 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
         Device device = devices.get(position);
 
         holder.tvDeviceName.setText(device.getName());
-        holder.tvDeviceDescription.setText(device.getDescription());
 
         // Obsługa statusu
         if (device.isOnline()) {
@@ -65,14 +64,13 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvDeviceName, tvDeviceDescription, tvStatus;
+        TextView tvDeviceName, tvStatus;
         View tvStatusIco;
         LinearLayout sensorsContainer;
 
         ViewHolder(View itemView) {
             super(itemView);
             tvDeviceName = itemView.findViewById(R.id.tvDeviceName);
-            tvDeviceDescription = itemView.findViewById(R.id.tvDeviceDescription);
             tvStatus = itemView.findViewById(R.id.tvStatus);
             tvStatusIco = itemView.findViewById(R.id.tvStatusIco);
             sensorsContainer = itemView.findViewById(R.id.layoutSensorsContainer);

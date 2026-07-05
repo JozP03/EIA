@@ -58,17 +58,6 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvDeviceDescription"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Salon - Główny hub"
-            android:textColor="@color/text_muted"
-            android:textSize="13sp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvDeviceName" />
-
         <!-- Kontener na listę czujników (max 5) -->
         <LinearLayout
             android:id="@+id/layoutSensorsContainer"
@@ -79,7 +68,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/ivArrow"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvDeviceDescription">
+            app:layout_constraintTop_toBottomOf="@id/tvDeviceName">
 
             <!-- Wiersze będą dodawane dynamicznie z layout/item_sensor_row.xml -->
 

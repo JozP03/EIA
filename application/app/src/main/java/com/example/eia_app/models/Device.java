@@ -1,21 +1,25 @@
 package com.example.eia_app.models;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Device {
     private String id;
     private String name;
-
-    private String description;
     private boolean isOnline;
-
     private List<Sensor> sensorList;
-    public Device(String id, String name, String description, boolean isOnline, List<Sensor> sensorList) {
+
+    public Device(String id, String name, boolean isOnline, List<Sensor> sensorList) {
         this.id = id;
         this.name = name;
-        this.description = description;
         this.isOnline = isOnline;
         this.sensorList = sensorList;
+    }
+    public Device(String id, String name) {
+        this.id = id;
+        this.name = name;
+        this.isOnline = false;
+        this.sensorList = new ArrayList<>();
     }
 
     public String getId() {
@@ -32,14 +36,6 @@ public class Device {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public boolean isOnline() {
