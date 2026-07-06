@@ -2,6 +2,8 @@ package com.example.eia_app.fragments;
 
 import android.os.Bundle;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import androidx.annotation.NonNull;
@@ -12,6 +14,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.NavigationUI;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +22,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.eia_app.R;
+import com.example.eia_app.adapters.DeviceAdapter;
+import com.example.eia_app.models.Device;
 import com.example.eia_app.repositories.MqttRepository;
 import com.example.eia_app.viewModels.DashboardViewModel;
 
@@ -91,6 +96,34 @@ public class DashboardFragment extends Fragment {
                 navController.navigate(R.id.aboutFragment);
             });
         }
+
+        androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvDeviceList);
+        TextView tvEmpty = view.findViewById(R.id.tvEmptyList);
+
+        com.example.eia_app.adapters.DeviceAdapter adapter = new com.example.eia_app.adapters.DeviceAdapter(device -> {
+           // przejście do szczegółów urządzenia
+            Log.d("DashboardFragment", "Kliknięcie na urządzenie: " + device.getName());
+        });
+
+        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
+        rv.setAdapter(adapter);
+
+        viewModel.getDevices().observe(getViewLifecycleOwner(), newDevices -> {
+            if (newDevices != null) {
+                // ListAdapter automatycznie obliczy różnice i zrobi animacje
+                adapter.submitList(new ArrayList<>(newDevices));
+
+                // Obsługa napisu pustej listy
+                if (newDevices.isEmpty()) {
+                    tvEmpty.setVisibility(View.VISIBLE);
+                    rv.setVisibility(View.GONE);
+                } else {
+                    tvEmpty.setVisibility(View.GONE);
+                    rv.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
     }
 
     @Override

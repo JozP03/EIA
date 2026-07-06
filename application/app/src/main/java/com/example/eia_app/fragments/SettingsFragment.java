@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment;
 
 import com.example.eia_app.R;
 import com.example.eia_app.repositories.MqttRepository;
+import com.example.eia_app.viewModels.DashboardViewModel;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.Objects;
@@ -83,7 +84,14 @@ public class SettingsFragment extends Fragment {
                     .setTitle("Resetowanie konfiguracji")
                     .setMessage("Czy na pewno chcesz usunąć ustawienia i skonfigurować wszystkie urządzenia ponownie?")
                     .setPositiveButton("Tak", (dialog, which) -> {
+                        // Czyszczenie ustawień ogólnych
                         requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE)
+                                .edit()
+                                .clear()
+                                .apply();
+
+                        // Czyszczenie listy urządzeń
+                        requireActivity().getSharedPreferences("EIA_DEVICES_PREFS", android.content.Context.MODE_PRIVATE)
                                 .edit()
                                 .clear()
                                 .apply();

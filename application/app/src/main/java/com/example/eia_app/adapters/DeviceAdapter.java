@@ -7,6 +7,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.eia_app.R;
@@ -14,16 +16,15 @@ import com.example.eia_app.models.Device;
 
 import java.util.List;
 
-public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder> {
-    private final List<Device> devices;
+public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder> {
     private final OnDeviceClickListener clickListener;
 
     public interface OnDeviceClickListener {
         void onDeviceClick(Device device);
     }
 
-    public DeviceAdapter(List<Device> devices, OnDeviceClickListener clickListener) {
-        this.devices = devices;
+    public DeviceAdapter(OnDeviceClickListener clickListener) {
+        super(new DiffCallback());
         this.clickListener = clickListener;
     }
 
@@ -36,7 +37,7 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Device device = devices.get(position);
+        Device device = getItem(position);
 
         holder.tvDeviceName.setText(device.getName());
 
@@ -51,16 +52,24 @@ public class DeviceAdapter extends RecyclerView.Adapter<DeviceAdapter.ViewHolder
             holder.tvStatusIco.setBackgroundColor(holder.itemView.getContext().getColor(R.color.text_muted));
         }
 
-
         holder.sensorsContainer.removeAllViews();
-        // Tu pętla po czujnikach na pozniej
+        // Tu pętla po czujnikach na później
 
         holder.itemView.setOnClickListener(v -> clickListener.onDeviceClick(device));
     }
 
-    @Override
-    public int getItemCount() {
-        return devices.size();
+    static class DiffCallback extends DiffUtil.ItemCallback<Device> {
+        @Override
+        public boolean areItemsTheSame(@NonNull Device oldItem, @NonNull Device newItem) {
+            return oldItem.getId().equals(newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Device oldItem, @NonNull Device newItem) {
+            // Zakładając, że Device ma poprawne porównywanie lub sprawdzamy kluczowe pola
+            return oldItem.getName().equals(newItem.getName()) && 
+                   oldItem.isOnline() == newItem.isOnline();
+        }
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
