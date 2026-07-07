@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.eia.app.R;
 import com.eia.app.models.Device;
+import com.eia.app.models.Sensor;
 
 import java.util.List;
 
@@ -53,7 +54,26 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
         }
 
         holder.sensorsContainer.removeAllViews();
-        // Tu pętla po czujnikach na później
+        // Tu pętla po czujnikach
+        if (device.getSensorList() != null) {
+            for (Sensor sensor : device.getSensorList()) {
+                View sensorView = LayoutInflater.from(holder.itemView.getContext())
+                        .inflate(R.layout.item_sensor_row, holder.sensorsContainer, false);
+
+                android.widget.TextView tvName = sensorView.findViewById(R.id.tvSensorName);
+                android.widget.TextView tvValue = sensorView.findViewById(R.id.tvSensorValue);
+                android.widget.ImageView ivIcon = sensorView.findViewById(R.id.ivSensorIcon);
+
+                tvName.setText(sensor.getName());
+
+                // Format (np. "22.5 °C")
+                String formattedValue = String.format(java.util.Locale.getDefault(),
+                        "%.1f %s", sensor.getValue(), sensor.getUnit());
+                tvValue.setText(formattedValue);
+
+                holder.sensorsContainer.addView(sensorView);
+            }
+        }
 
         holder.itemView.setOnClickListener(v -> clickListener.onDeviceClick(device));
     }
@@ -66,7 +86,6 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
 
         @Override
         public boolean areContentsTheSame(@NonNull Device oldItem, @NonNull Device newItem) {
-            // Zakładając, że Device ma poprawne porównywanie lub sprawdzamy kluczowe pola
             return oldItem.getName().equals(newItem.getName()) && 
                    oldItem.isOnline() == newItem.isOnline();
         }
