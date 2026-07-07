@@ -1,0 +1,135 @@
+package com.eia.app.fragments;
+
+import android.os.Bundle;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
+import androidx.navigation.ui.NavigationUI;
+
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.eia.app.R;
+import com.eia.app.adapters.DeviceAdapter;
+import com.eia.app.models.Device;
+import com.eia.app.repositories.MqttRepository;
+import com.eia.app.viewModels.DashboardViewModel;
+
+public class DashboardFragment extends Fragment {
+
+    private DashboardViewModel viewModel;
+    
+    public DashboardFragment() {
+        // Required empty public constructor
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        viewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
+
+        viewModel.initMqttConnection();
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+
+        return inflater.inflate(R.layout.fragment_dashboard, container, false);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.dashboard_nav_view);
+        NavController navController = Navigation.findNavController(view);
+        
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
+            
+            if (id == R.id.settingsFragment) {
+                navController.navigate(R.id.settingsFragment);
+            }
+            
+            if (drawer != null) {
+                drawer.closeDrawers();
+            }
+            return true;
+        });
+
+        // przycisk +
+        view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
+            navController.navigate(R.id.action_dashboardFragment_to_connectionFragment);
+        });
+
+        //panel boczny
+        view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
+            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
+            if (drawer != null) {
+                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+            }
+        });
+
+        // przysk o aplikacji
+        View navAbout = view.findViewById(R.id.btnNavAbout);
+        if (navAbout != null) {
+            navAbout.setOnClickListener(v -> {
+                androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
+                if (drawer != null) {
+                    drawer.closeDrawers();
+                }
+                navController.navigate(R.id.aboutFragment);
+            });
+        }
+
+        androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvDeviceList);
+        TextView tvEmpty = view.findViewById(R.id.tvEmptyList);
+
+        com.eia.app.adapters.DeviceAdapter adapter = new com.eia.app.adapters.DeviceAdapter(device -> {
+           // przejście do szczegółów urządzenia
+            Log.d("DashboardFragment", "Kliknięcie na urządzenie: " + device.getName());
+        });
+
+        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
+        rv.setAdapter(adapter);
+
+        viewModel.getDevices().observe(getViewLifecycleOwner(), newDevices -> {
+            if (newDevices != null) {
+                // ListAdapter automatycznie obliczy różnice i zrobi animacje
+                adapter.submitList(new ArrayList<>(newDevices));
+
+                // Obsługa napisu pustej listy
+                if (newDevices.isEmpty()) {
+                    tvEmpty.setVisibility(View.VISIBLE);
+                    rv.setVisibility(View.GONE);
+                } else {
+                    tvEmpty.setVisibility(View.GONE);
+                    rv.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
+    }
+
+    @Override
+    public void onDestroy() {
+
+        MqttRepository.getInstance().disconnectFromBroker();
+        super.onDestroy();
+    }
+}

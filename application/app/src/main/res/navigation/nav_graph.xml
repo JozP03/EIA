@@ -6,7 +6,7 @@
     app:startDestination="@id/connectionFragment">
     <fragment
         android:id="@+id/connectionFragment"
-        android:name="com.example.eia_app.fragments.ConnectionFragment"
+        android:name="com.eia.app.fragments.ConnectionFragment"
         android:label="fragment_connection"
         tools:layout="@layout/fragment_connection" >
         <action
@@ -18,7 +18,7 @@
     </fragment>
     <fragment
         android:id="@+id/scanFragment"
-        android:name="com.example.eia_app.fragments.ScanFragment"
+        android:name="com.eia.app.fragments.ScanFragment"
         android:label="fragment_scan"
         tools:layout="@layout/fragment_scan" >
         <action
@@ -30,7 +30,7 @@
     </fragment>
     <fragment
         android:id="@+id/configFragment"
-        android:name="com.example.eia_app.fragments.ConfigFragment"
+        android:name="com.eia.app.fragments.ConfigFragment"
         android:label="fragment_config"
         tools:layout="@layout/fragment_config" >
         <action
@@ -47,7 +47,7 @@
     </fragment>
     <fragment
         android:id="@+id/dashboardFragment"
-        android:name="com.example.eia_app.fragments.DashboardFragment"
+        android:name="com.eia.app.fragments.DashboardFragment"
         android:label="fragment_dashboard"
         tools:layout="@layout/fragment_dashboard" >
         <action
@@ -56,12 +56,12 @@
     </fragment>
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.example.eia_app.fragments.SettingsFragment"
+        android:name="com.eia.app.fragments.SettingsFragment"
         android:label="Ustawienia"
         tools:layout="@layout/fragment_settings" />
     <fragment
         android:id="@+id/aboutFragment"
-        android:name="com.example.eia_app.fragments.AboutFragment"
+        android:name="com.eia.app.fragments.AboutFragment"
         android:label="O aplikacji"
         tools:layout="@layout/fragment_about" />
 </navigation>
