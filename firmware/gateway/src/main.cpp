@@ -309,8 +309,9 @@ void handleConnectionRequest(String cmd) {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("STATUS:OK;IP:");
-    Serial.println(WiFi.localIP().toString());
+    Serial.print("STATUS:OK;ID:");
+    String mac = WiFi.macAddress();
+    Serial.println("gate_" + mac);
     delay(10);
     preferences.putInt("mode", 1);
     preferences.putString("last_ssid", ssid);
@@ -381,8 +382,9 @@ void handleStaticConnectionRequest(String cmd) {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("STATUS:OK;IP:");
-    Serial.println(WiFi.localIP().toString());
+    Serial.print("STATUS:OK;ID:");
+    String mac = WiFi.macAddress();
+    Serial.println("gate_" + mac);
     delay(10);
     preferences.putInt("mode", 0);
     preferences.putString("last_ssid", ssid);

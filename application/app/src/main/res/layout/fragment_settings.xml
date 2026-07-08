@@ -228,7 +228,7 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
+                    android:layout_marginTop="16dp"
                     android:text="Resetuj do fabrycznych"
                     android:textColor="@color/accent_red"
                     android:textSize="12sp"

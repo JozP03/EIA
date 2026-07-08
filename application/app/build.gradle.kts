@@ -3,15 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.eia_app"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    namespace = "com.eia.app"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.eia_app"
+        applicationId = "com.eia.app"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
