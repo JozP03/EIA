@@ -4,21 +4,31 @@ import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
+import com.eia.app.models.MqttEvent;
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
+
 import java.util.UUID;
 
 public class MqttRepository {
     private static final String TAG = "MqttRepository";
     private static MqttRepository instance;
-    private final MutableLiveData<Float> messageStream = new MutableLiveData<>();
-    private final MutableLiveData<String> statusStream = new MutableLiveData<>();
+    
+    private final MutableLiveData<MqttEvent> eventStream = new MutableLiveData<>();
 
     private String username = "";
     private String password = "";
     private Mqtt5AsyncClient client;
 
     private MqttRepository(){
+    }
+
+    public static synchronized MqttRepository getInstance(){
+        if( instance == null ){
+            instance = new MqttRepository();
+        }
+        return instance;
     }
 
     public void configure(String host, String username, String password) {
@@ -54,7 +64,7 @@ public class MqttRepository {
                     if(throwable != null){
                         Log.e(TAG,"Błąd połączenia z MQTT: " + throwable.getMessage());
                     }else {
-                        Log.e(TAG,"Połączono z MQTT");
+                        Log.d(TAG,"Połączono z MQTT");
                         subscribeTopics();
                     }
                 }));
@@ -62,16 +72,9 @@ public class MqttRepository {
 
     public void disconnectFromBroker(){
         if (client != null) {
-            Log.e(TAG,"Rozłączono z MQTT");
+            Log.d(TAG,"Rozłączono z MQTT");
             client.disconnect();
         }
-    }
-
-    public static synchronized MqttRepository getInstance(){
-        if( instance == null ){
-            instance = new MqttRepository();
-        }
-        return instance;
     }
 
     public void publishCommand(String topic, String jsonPayload) {
@@ -88,37 +91,35 @@ public class MqttRepository {
             Log.e(TAG, "Cannot subscribe: Client is null");
             return;
         }
-        // Subskrypcja na dane (np. dom/czujnik1/temp)
+        
+        // Subskrypcja na wszystko
+        // gate_1/status
+        // gate_1/sensor/temp_1/state
         client.subscribeWith()
-                .topicFilter("dom/+/temp")
+                .topicFilter("#")
                 .callback(publish -> {
+                    String topic = publish.getTopic().toString();
                     String payload = new String(publish.getPayloadAsBytes());
-                    try {
-                        float value = Float.parseFloat(payload.trim());
-                        messageStream.postValue(value);
-                    } catch (NumberFormatException e) {
-                        Log.e(TAG,"Błąd dekodowania danych: " + e.getMessage());
+                    
+                    String[] parts = topic.split("/");
+                    if (parts.length >= 2) {
+                        String deviceId = parts[0];
+                        
+                        if (topic.endsWith("/status")) {
+                            eventStream.postValue(new MqttEvent(deviceId, null, payload, MqttEvent.Type.STATUS));
+                        } else if (topic.contains("/sensor/") && topic.endsWith("/state")) {
+                            // Format: DEVICE_ID/sensor/SENSOR_ID/state
+                            if (parts.length >= 3) {
+                                String sensorId = parts[2];
+                                eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
+                            }
+                        }
                     }
                 })
                 .send();
-
-        // Subskrypcja na statusy (np. dom/brama/status)
-        client.subscribeWith()
-                .topicFilter("dom/+/status")
-                .callback(publish -> {
-                    String status = new String(publish.getPayloadAsBytes());
-                    String topic = publish.getTopic().toString();
-                    Log.d(TAG, "Status z " + topic + ": " + status);
-                    statusStream.postValue(status);
-                })
-                .send();
     }
 
-    public LiveData<Float> getMessageStream(){
-        return messageStream;
-    }
-
-    public LiveData<String> getStatusStream() {
-        return statusStream;
+    public LiveData<MqttEvent> getEventStream(){
+        return eventStream;
     }
 }
