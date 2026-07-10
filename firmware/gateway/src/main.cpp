@@ -330,11 +330,11 @@ void handleStaticConnectionRequest(String cmd) {
   // Wycinamy nagłówek "CONN_STATIC:" (12 znaków)
   String data = cmd.substring(12); 
   
-  // Tablica na 5 wyciętych stringów: [0]=SSID, [1]=Haslo, [2]=IP, [3]=Brama, [4]=Maska
+  // Tablica na 5 stringów: [0]=SSID, [1]=Haslo, [2]=IP, [3]=Brama, [4]=Maska
   String parts[5];
   int partCount = 0;
   
-  // Prosty parser dzielący tekst po średnikach
+  // dzielenie po srednikach
   while (data.length() > 0 && partCount < 5) {
     int idx = data.indexOf(';');
     if (idx == -1) {
@@ -346,7 +346,6 @@ void handleStaticConnectionRequest(String cmd) {
     }
   }
 
-  // Sprawdzamy czy otrzymaliśmy komplet danych
   if (partCount < 5) {
     Serial.println("STATUS:ERROR_FORMAT");
     return;
@@ -405,7 +404,8 @@ void reconnectMqtt() {
     Serial.println("STATUS:MQTT_RECONNECTING...");
     
     //parametry dla statusu
-    const char* statusTopic = "dom/brama/status";
+    String mac = WiFi.macAddress();
+    const char* statusTopic = ("gate_" + mac + "/status").c_str();
     const char* payloadOnline = "online";
     const char* payloadOffline = "offline";
     
