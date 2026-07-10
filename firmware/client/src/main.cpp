@@ -17,7 +17,7 @@ void setup() {
   String mac = WiFi.macAddress();
   mac.replace(":", "");
   
-  // Tworzymy unikalną nazwę w formacie ESP_C3_A1B2C3
+  // unikalna nazwa w formacie ESP_C3_A1B2C3
   uniqueSensorName = "ESP_C3_" + mac.substring(mac.length() - 6);
   
   Serial.print("Unikalna nazwa tego sensora: ");
