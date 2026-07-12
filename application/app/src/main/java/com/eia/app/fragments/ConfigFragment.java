@@ -186,13 +186,13 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
             }
 
             if (line.startsWith("STATUS:OK")) {
-                // Wyciąganie ID (gate_MAC)
+                // Wyciąganie ID (gate_AABBCCDDEEFF)
                 String deviceId = "unknown_gate";
                 if (line.contains("ID:")) {
                     String[] parts = line.split(";");
                     for (String part : parts) {
                         if (part.startsWith("ID:")) {
-                            deviceId = part.substring(3); // Pobieramy wszystko po "ID:"
+                            deviceId = part.substring(3).trim();
                         }
                     }
                 }

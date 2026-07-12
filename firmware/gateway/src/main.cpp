@@ -68,6 +68,7 @@ void reconnectMqtt();
 void bleTask(void *pvParameters);
 void mqttTask(void *pvParameters);
 
+// Struktura wiadomości – przechowuje ID sensora oraz wartość
 struct Message {
     char sensorId[12]; 
     float floatValue;
@@ -75,16 +76,14 @@ struct Message {
 
 QueueHandle_t valueQueue;
 
-// Klasa callbacku BLE przystosowana do nowego formatu ID:A1B2C3;T:22.5
+// Klasa callbacku BLE parsująca format "ID:A1B2C3;T:22.5"
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
     String deviceName = String(advertisedDevice.getName().c_str());
 
-    // Skanujemy i akceptujemy wszystkie urządzenia z Twojej rodziny produktowej
     if (deviceName.startsWith("ESP_C3_")) {
       String data = advertisedDevice.getManufacturerData().c_str();
 
-      // Parsowanie formatu "ID:A1B2C3;T:22.5"
       if (data.startsWith("ID:")) {
         int semiColonIndex = data.indexOf(';');
         if (semiColonIndex != -1) {
@@ -100,7 +99,6 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
             strncpy(msg.sensorId, idStr.c_str(), sizeof(msg.sensorId) - 1);
             msg.floatValue = temp;
 
-            // Przesłanie paczki do kolejki
             if (xQueueSend(valueQueue, &msg, 0) != pdPASS) {
                 Serial.println("QUEUE FULL");
             }
@@ -148,22 +146,8 @@ void setup() {
 
   Serial.println("STATUS:GATEWAY_READY");
   
-  xTaskCreate(
-    bleTask,
-    "BLE_TASK",
-    6000,
-    NULL,
-    1,
-    NULL
-  );
-  xTaskCreate(
-    mqttTask,
-    "MQTT_TASK",
-    8000,
-    NULL, 
-    1,
-    NULL
-  );
+  xTaskCreate(bleTask, "BLE_TASK", 6000, NULL, 1, NULL);
+  xTaskCreate(mqttTask, "MQTT_TASK", 8000, NULL, 1, NULL);
 }
 
 void executeFactoryReset() {
@@ -210,7 +194,6 @@ void mqttTask(void *pvParameters) {
     static unsigned long lastReconnectAttempt = 0;
     const unsigned long reconnectInterval = 5000; 
 
-    // Przygotowanie unikalnego ID bramy
     String mac = WiFi.macAddress();
     mac.replace(":", "");
     String gateId = "gate_" + mac;
@@ -230,7 +213,7 @@ void mqttTask(void *pvParameters) {
                     char topic[64];
                     char payload[16];
                     
-                    // Format tematu: idbramy/idsensora np. gate_24DCF2A1B2C3/A1B2C3
+                    // Format tematu: gate_24DCF2A1B2C3/A1B2C3
                     snprintf(topic, sizeof(topic), "%s/%s", gateId.c_str(), msg.sensorId);
                     snprintf(payload, sizeof(payload), "%.1f", msg.floatValue);
                     
@@ -285,10 +268,11 @@ void handleConnectionRequest(String cmd) {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("STATUS:OK;ID:");
     String mac = WiFi.macAddress();
     mac.replace(":", "");
+    Serial.print("STATUS:OK;ID:");
     Serial.println("gate_" + mac);
+    
     delay(10);
     preferences.putInt("mode", 1);
     preferences.putString("last_ssid", ssid);
@@ -345,10 +329,11 @@ void handleStaticConnectionRequest(String cmd) {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("STATUS:OK;ID:");
     String mac = WiFi.macAddress();
     mac.replace(":", "");
+    Serial.print("STATUS:OK;ID:");
     Serial.println("gate_" + mac);
+    
     delay(10);
     preferences.putInt("mode", 0);
     preferences.putString("last_ssid", ssid);
