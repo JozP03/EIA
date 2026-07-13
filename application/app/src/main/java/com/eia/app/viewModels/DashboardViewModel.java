@@ -45,24 +45,32 @@ public class DashboardViewModel extends AndroidViewModel {
             List<Device> currentList = devices.getValue();
             if (currentList == null) return;
 
-            boolean updated = false;
+            List<Device> newList = new ArrayList<>();
+            boolean anyUpdated = false;
+
             for (Device device : currentList) {
                 if (device.getId().equals(event.getDeviceId())) {
+                    Device updatedDevice = device.copy();
                     if (event.getType() == MqttEvent.Type.STATUS) {
                         boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
-                        device.setOnline(isOnline);
-                        updated = true;
+                        updatedDevice.setOnline(isOnline);
+                        newList.add(updatedDevice);
+                        anyUpdated = true;
                     } else if (event.getType() == MqttEvent.Type.DATA) {
-                        updateSensorData(device, event.getSensorId(), event.getPayload());
-                        updated = true;
+                        updateSensorData(updatedDevice, event.getSensorId(), event.getPayload());
+                        newList.add(updatedDevice);
+                        anyUpdated = true;
+                    } else {
+                        newList.add(device);
                     }
-                    break;
+                } else {
+                    newList.add(device);
                 }
             }
 
-            if (updated) {
-                devices.setValue(new ArrayList<>(currentList));
-                persistDevices(currentList);
+            if (anyUpdated) {
+                devices.setValue(newList);
+                persistDevices(newList);
             }
         });
     }
@@ -88,7 +96,6 @@ public class DashboardViewModel extends AndroidViewModel {
             }
 
             if (!found) {
-                // Auto-discovery: jeśli nie znamy sensora, dodajemy go (tymczasowe założenie typu)
                 sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, "---", value));
             }
         } catch (NumberFormatException e) {

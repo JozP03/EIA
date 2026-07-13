@@ -54,4 +54,21 @@ public class Sensor {
     public void setValue(float value) {
         this.value = value;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Sensor sensor = (Sensor) o;
+        return Float.compare(sensor.value, value) == 0 &&
+                id.equals(sensor.id) &&
+                type.equals(sensor.type) &&
+                name.equals(sensor.name) &&
+                unit.equals(sensor.unit);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(id, type, name, unit, value);
+    }
 }

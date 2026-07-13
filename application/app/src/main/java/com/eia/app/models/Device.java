@@ -53,4 +53,30 @@ public class Device {
     public void setSensorList(List<Sensor> sensorList) {
         this.sensorList = sensorList;
     }
+
+    public Device copy() {
+        List<Sensor> sensorsCopy = new ArrayList<>();
+        if (this.sensorList != null) {
+            for (Sensor s : this.sensorList) {
+                sensorsCopy.add(new Sensor(s.getId(), s.getType(), s.getName(), s.getUnit(), s.getValue()));
+            }
+        }
+        return new Device(this.id, this.name, this.isOnline, sensorsCopy);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Device device = (Device) o;
+        return isOnline == device.isOnline &&
+                id.equals(device.id) &&
+                name.equals(device.name) &&
+                java.util.Objects.equals(sensorList, device.sensorList);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(id, name, isOnline, sensorList);
+    }
 }
