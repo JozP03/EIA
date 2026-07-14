@@ -18,7 +18,7 @@ void setup() {
   mac.replace(":", "");
   
   // unikalna nazwa w formacie ESP_C3_A1B2C3
-  uniqueSensorName = "ESP_C3_" + mac.substring(mac.length() - 6);
+  uniqueSensorName = "ESP_" + mac.substring(mac.length() - 6);
   
   Serial.print("Unikalna nazwa tego sensora: ");
   Serial.println(uniqueSensorName);
@@ -47,7 +47,7 @@ void loop() {
     if(mockTemperature > 28.0) mockTemperature = 22.0;
 
     // format: "ID:A1B2C3;T:22.5"
-    String payload = "ID:" + uniqueSensorName.substring(7) + ";T:" + String(mockTemperature, 1);
+    String payload = "ID:" + uniqueSensorName + ";T:" + String(mockTemperature, 1);
     
     // Aktualizacja pakietu BLE
     pAdvertising->stop();

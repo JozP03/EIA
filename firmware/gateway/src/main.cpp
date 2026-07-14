@@ -68,7 +68,7 @@ void reconnectMqtt();
 void bleTask(void *pvParameters);
 void mqttTask(void *pvParameters);
 
-// Struktura wiadomości – przechowuje ID sensora oraz wartość
+// Struktura wiadomości
 struct Message {
     char sensorId[12]; 
     float floatValue;
@@ -81,7 +81,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
     String deviceName = String(advertisedDevice.getName().c_str());
 
-    if (deviceName.startsWith("ESP_C3_")) {
+    if (deviceName.startsWith("ESP_")) {
       String data = advertisedDevice.getManufacturerData().c_str();
 
       if (data.startsWith("ID:")) {
