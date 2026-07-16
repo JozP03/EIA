@@ -93,8 +93,8 @@ public class MqttRepository {
         }
         
         // Subskrypcja na wszystko
-        // gate_1/status
-        // gate_1/sensor/temp_1/state
+        // Format statusu bramki: deviceid/status
+        // Format danych sensora: deviceid/sensorid/value
         client.subscribeWith()
                 .topicFilter("#")
                 .callback(publish -> {
@@ -102,18 +102,17 @@ public class MqttRepository {
                     String payload = new String(publish.getPayloadAsBytes());
                     
                     String[] parts = topic.split("/");
-                    if (parts.length >= 2) {
+                    if (parts.length == 2) {
+                        // deviceid/status
                         String deviceId = parts[0];
-                        
-                        if (topic.endsWith("/status")) {
+                        if (parts[1].equals("status")) {
                             eventStream.postValue(new MqttEvent(deviceId, null, payload, MqttEvent.Type.STATUS));
-                        } else if (topic.contains("/sensor/") && topic.endsWith("/state")) {
-                            // Format: DEVICE_ID/sensor/SENSOR_ID/state
-                            if (parts.length >= 3) {
-                                String sensorId = parts[2];
-                                eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
-                            }
                         }
+                    } else if (parts.length == 3) {
+                        // deviceid/sensorid/status lub value
+                        String deviceId = parts[0];
+                        String sensorId = parts[1];
+                        eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
                     }
                 })
                 .send();

@@ -14,10 +14,10 @@ int mode;
 const int WIFI_TIMEOUT_MS = 25000;
 
 // MQTT zmienne
-const char* mqtt_server = "";
-const int mqtt_port = 8883;
-const char* mqtt_user = "";
-const char* mqtt_pass = "";
+	const char* mqtt_server = "";
+	const int mqtt_port = 8883;
+	const char* mqtt_user = "";
+	const char* mqtt_pass = "";
 
 // Certyfikat ISRG Root X1
 const char* root_ca = \
@@ -133,9 +133,9 @@ void setup() {
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(true);
-  pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99);
+  pBLEScan->setActiveScan(false);
+  pBLEScan->setInterval(1349);
+  pBLEScan->setWindow(449);
 
   delay(1000);
 
@@ -183,9 +183,11 @@ void loop() {
 //-- Tasks --
 void bleTask(void *pvParameters) {
     while (true) {
-        pBLEScan->start(1, false);
-        pBLEScan->clearResults();
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        pBLEScan->start(0, true);
+        while (true) {
+            
+          vTaskDelay(pdMS_TO_TICKS(1000));
+      }
     }
 }
 

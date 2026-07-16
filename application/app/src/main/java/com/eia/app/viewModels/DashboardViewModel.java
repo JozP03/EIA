@@ -143,6 +143,12 @@ public class DashboardViewModel extends AndroidViewModel {
         }
     }
 
+    public void clearAllDevices() {
+        List<Device> emptyList = new ArrayList<>();
+        devices.setValue(emptyList);
+        persistDevices(emptyList);
+    }
+
     private void persistDevices(List<Device> list) {
         String json = gson.toJson(list);
         prefs.edit().putString(KEY_DEVICES, json).apply();
