@@ -12,56 +12,51 @@ unsigned long lastSendTime = 0;
 const unsigned long sendInterval = 30000; // 30 sekund
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   String mac = WiFi.macAddress();
   mac.replace(":", "");
-  
-  // unikalna nazwa w formacie ESP_C3_A1B2C3
   uniqueSensorName = "ESP_" + mac.substring(mac.length() - 6);
   
-  Serial.print("Unikalna nazwa tego sensora: ");
-  Serial.println(uniqueSensorName);
+  Serial.println("Unikalna nazwa: " + uniqueSensorName);
 
-  //Inicjalizacja stosu BLE
-  BLEDevice::init(uniqueSensorName.c_str());
+  BLEDevice::init("");
   pAdvertising = BLEDevice::getAdvertising();
   
-  // Podstawowa konfiguracja rozgłaszania
-  pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);
+  pAdvertising->setScanResponse(true); 
   pAdvertising->start();
   
-  Serial.println("Start rozgłaszania BLE...");
+  Serial.println("Start rozgłaszania...");
 }
 
 void loop() {
   unsigned long currentTime = millis();
 
-  // Sprawdzamy, czy minęło 30 sekund
   if (currentTime - lastSendTime >= sendInterval) {
     lastSendTime = currentTime;
 
-    // Symulacja zmiany temperatury
     mockTemperature += 0.1;
     if(mockTemperature > 28.0) mockTemperature = 22.0;
 
-    // format: "ID:A1B2C3;T:22.5"
     String payload = "ID:" + uniqueSensorName + ";T:" + String(mockTemperature, 1);
     
-    // Aktualizacja pakietu BLE
     pAdvertising->stop();
 
-    BLEAdvertisementData oAdvertisementData;
-    // Ustawiamy unikalną nazwę urządzenia widoczną przy skanowaniu
-    oAdvertisementData.setName(uniqueSensorName.c_str());
-    // Wrzucamy payload do pola Manufacturer Data
-    oAdvertisementData.setManufacturerData(payload.c_str()); 
+    // 1. Pakiet główny 
+    BLEAdvertisementData advertisementData;
+    advertisementData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
+    advertisementData.setManufacturerData(payload.c_str()); 
     
-    pAdvertising->setAdvertisementData(oAdvertisementData);
+    // 2. Scan Response
+    BLEAdvertisementData scanResponseData;
+    scanResponseData.setName(uniqueSensorName.c_str());
+
+    pAdvertising->setAdvertisementData(advertisementData);
+    pAdvertising->setScanResponseData(scanResponseData);
+    
     pAdvertising->start();
     
-    Serial.println("Rozgłaszam pakiet: " + payload);
+    Serial.println("Rozgłoszono: " + payload);
   }
 
   delay(10); 

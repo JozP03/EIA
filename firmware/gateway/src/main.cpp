@@ -79,19 +79,21 @@ QueueHandle_t valueQueue;
 // Klasa callbacku BLE parsująca format "ID:A1B2C3;T:22.5"
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
-    String deviceName = String(advertisedDevice.getName().c_str());
+    if (advertisedDevice.haveManufacturerData()) {
+      
+      // pobranie danych
+      std::string strManufacturerData = advertisedDevice.getManufacturerData();
+      String data = String(strManufacturerData.c_str());
 
-    if (deviceName.startsWith("ESP_")) {
-      String data = advertisedDevice.getManufacturerData().c_str();
-
+      // Sprawdzamy czy zaczyna się od ID
       if (data.startsWith("ID:")) {
         int semiColonIndex = data.indexOf(';');
         if (semiColonIndex != -1) {
-          String idStr = data.substring(3, semiColonIndex); // Wyciąga "A1B2C3"
+          String idStr = data.substring(3, semiColonIndex);
           int tIndex = data.indexOf("T:", semiColonIndex);
           
           if (tIndex != -1) {
-            String tempStr = data.substring(tIndex + 2); // Wyciąga temperaturę
+            String tempStr = data.substring(tIndex + 2);
             float temp = tempStr.toFloat();
 
             Message msg;
@@ -99,14 +101,9 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
             strncpy(msg.sensorId, idStr.c_str(), sizeof(msg.sensorId) - 1);
             msg.floatValue = temp;
 
-            if (xQueueSend(valueQueue, &msg, 0) != pdPASS) {
-                Serial.println("QUEUE FULL");
+            if (xQueueSend(valueQueue, &msg, 0) == pdPASS) {
+                Serial.printf("SUKCES: Odbrano %s -> %.1f\n", msg.sensorId, temp);
             }
-
-            Serial.print("BLE_RCV [Sensor: ");
-            Serial.print(msg.sensorId);
-            Serial.print("]: ");
-            Serial.println(temp);
           }
         }
       }
@@ -133,7 +130,7 @@ void setup() {
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(false);
+  pBLEScan->setActiveScan(true);
   pBLEScan->setInterval(1349);
   pBLEScan->setWindow(449);
 
@@ -183,11 +180,11 @@ void loop() {
 //-- Tasks --
 void bleTask(void *pvParameters) {
     while (true) {
-        pBLEScan->start(0, true);
-        while (true) {
-            
-          vTaskDelay(pdMS_TO_TICKS(1000));
-      }
+        pBLEScan->start(3, false); 
+        
+        pBLEScan->clearResults(); 
+        
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
