@@ -9,15 +9,12 @@
 
 Preferences preferences;
 
-// WiFi mode (0 - Static, 1 - DHCP)
-int mode;
+// --- KONFIGURACJA ---
 const int WIFI_TIMEOUT_MS = 25000;
-
-// MQTT zmienne
-	const char* mqtt_server = "";
-	const int mqtt_port = 8883;
-	const char* mqtt_user = "";
-	const char* mqtt_pass = "";
+const char* mqtt_server = ""; 
+const int mqtt_port = 8883;
+const char* mqtt_user = "";
+const char* mqtt_pass = "";
 
 // Certyfikat ISRG Root X1
 const char* root_ca = \
@@ -53,57 +50,59 @@ const char* root_ca = \
   "emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=" \
   "-----END CERTIFICATE-----\n";
 
+// --- GLOBALNE ---
+String gateId;
 WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
-
 BLEScan* pBLEScan;
+QueueHandle_t valueQueue;
 
-// Prototypy funkcji
-void executeWifiScan();
-void handleConnectionRequest(String cmd);
-void handleStaticConnectionRequest(String cmd);
-void mqttCallback(char* topic, byte* payload, unsigned int length);
-bool connectToSavedWifi();
-void reconnectMqtt();
-void bleTask(void *pvParameters);
-void mqttTask(void *pvParameters);
+struct SensorStatus {
+    char id[16];
+    unsigned long lastSeen;
+    bool isOnline;
+};
+#define MAX_SENSORS 10
+SensorStatus sensorRegistry[MAX_SENSORS];
 
-// Struktura wiadomości
 struct Message {
     char sensorId[12]; 
     float floatValue;
 };
 
-QueueHandle_t valueQueue;
+// --- PROTOTYPY ---
+void updateSensorStatus(const char* id);
+void checkOfflineSensors();
+void reconnectMqtt();
+void mqttCallback(char* topic, byte* payload, unsigned int length);
+bool connectToSavedWifi();
+void executeWifiScan();
+void handleConnectionRequest(String cmd);
+void handleStaticConnectionRequest(String cmd);
+void bleTask(void *pvParameters);
+void mqttTask(void *pvParameters);
 
-// Klasa callbacku BLE parsująca format "ID:A1B2C3;T:22.5"
+// --- CALLBACK BLE ---
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
     if (advertisedDevice.haveManufacturerData()) {
-      
-      // pobranie danych
       std::string strManufacturerData = advertisedDevice.getManufacturerData();
       String data = String(strManufacturerData.c_str());
 
-      // Sprawdzamy czy zaczyna się od ID
       if (data.startsWith("ID:")) {
         int semiColonIndex = data.indexOf(';');
         if (semiColonIndex != -1) {
           String idStr = data.substring(3, semiColonIndex);
           int tIndex = data.indexOf("T:", semiColonIndex);
-          
           if (tIndex != -1) {
-            String tempStr = data.substring(tIndex + 2);
-            float temp = tempStr.toFloat();
-
+            float temp = data.substring(tIndex + 2).toFloat();
             Message msg;
             memset(msg.sensorId, 0, sizeof(msg.sensorId));
             strncpy(msg.sensorId, idStr.c_str(), sizeof(msg.sensorId) - 1);
             msg.floatValue = temp;
 
-            if (xQueueSend(valueQueue, &msg, 0) == pdPASS) {
-                Serial.printf("SUKCES: Odbrano %s -> %.1f\n", msg.sensorId, temp);
-            }
+            updateSensorStatus(msg.sensorId);
+            xQueueSend(valueQueue, &msg, 0);
           }
         }
       }
@@ -113,16 +112,10 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 void setup() {
   Serial.begin(115200);
-  
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
 
   valueQueue = xQueueCreate(10, sizeof(Message));
-
-  if (valueQueue == NULL) {
-      Serial.println("QUEUE CREATE FAILED");
-  }
-  
   espClient.setCACert(root_ca);
   mqttClient.setServer(mqtt_server, mqtt_port);
   mqttClient.setCallback(mqttCallback);
@@ -135,89 +128,60 @@ void setup() {
   pBLEScan->setWindow(449);
 
   delay(1000);
+  gateId = "gate_" + WiFi.macAddress();
+  gateId.replace(":", "");
 
-  Serial.println("STATUS:WIFI_INIT_AUTO_CONNECT...");
-  if (!connectToSavedWifi()) {
-    Serial.println("STATUS:NO_SAVED_WIFI_OR_CONNECT_FAIL");
-  }
+  connectToSavedWifi();
 
-  Serial.println("STATUS:GATEWAY_READY");
-  
   xTaskCreate(bleTask, "BLE_TASK", 6000, NULL, 1, NULL);
   xTaskCreate(mqttTask, "MQTT_TASK", 8000, NULL, 1, NULL);
-}
-
-void executeFactoryReset() {
-  Serial.println("STATUS:CLEARING_PREFERENCES...");
-  preferences.begin("wifi", false);
-  preferences.clear(); 
-  preferences.end();
-  Serial.println("STATUS:PREFERENCES_CLEARED. REBOOTING IN 2 SECONDS...");
-  delay(2000);
-  ESP.restart();
 }
 
 void loop() {
   if (Serial.available() > 0) {
     String input = Serial.readStringUntil('\n');
     input.trim();
-
-    if (input.equalsIgnoreCase("SCAN")) {
-      executeWifiScan();
-    }
-    else if (input.startsWith("CONN:")) {
-      handleConnectionRequest(input);
-    }
-    else if (input.startsWith("CONN_STATIC:")) {
-      handleStaticConnectionRequest(input);
-    }
-    else if (input.startsWith("RESET")) {
-      executeFactoryReset();
+    if (input.equalsIgnoreCase("SCAN")) executeWifiScan();
+    else if (input.startsWith("CONN:")) handleConnectionRequest(input);
+    else if (input.startsWith("CONN_STATIC:")) handleStaticConnectionRequest(input);
+    else if (input.equalsIgnoreCase("RESET")) {
+        preferences.begin("wifi", false); preferences.clear(); preferences.end(); ESP.restart();
     }
   }
+  delay(100);
 }
 
-//-- Tasks --
+// --- TASKS ---
 void bleTask(void *pvParameters) {
     while (true) {
-        pBLEScan->start(3, false); 
-        
+        pBLEScan->start(3, true);
         pBLEScan->clearResults(); 
-        
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 
 void mqttTask(void *pvParameters) {
     Message msg;
     static unsigned long lastReconnectAttempt = 0;
-    const unsigned long reconnectInterval = 5000; 
-
-    String mac = WiFi.macAddress();
-    mac.replace(":", "");
-    String gateId = "gate_" + mac;
+    static unsigned long lastCheckTime = 0;
 
     while (true) {
         if (WiFi.status() == WL_CONNECTED) {
             if (!mqttClient.connected()) {
-                unsigned long now = millis();
-                if (now - lastReconnectAttempt > reconnectInterval) {
-                    lastReconnectAttempt = now;
+                if (millis() - lastReconnectAttempt > 5000) {
+                    lastReconnectAttempt = millis();
                     reconnectMqtt();
                 }
             } else {
                 mqttClient.loop();
-
+                if (millis() - lastCheckTime > 60000) {
+                    checkOfflineSensors();
+                    lastCheckTime = millis();
+                }
                 while (xQueueReceive(valueQueue, &msg, 0) == pdTRUE) {
                     char topic[64];
-                    char payload[16];
-                    
-                    // Format tematu: gate_24DCF2A1B2C3/A1B2C3
                     snprintf(topic, sizeof(topic), "%s/%s", gateId.c_str(), msg.sensorId);
-                    snprintf(payload, sizeof(payload), "%.1f", msg.floatValue);
-                    
-                    mqttClient.publish(topic, payload);
-                    Serial.printf("MQTT_PUB: [%s] -> %s\n", topic, payload);
+                    mqttClient.publish(topic, String(msg.floatValue, 1).c_str());
                 }
             }
         }
@@ -225,27 +189,85 @@ void mqttTask(void *pvParameters) {
     }
 }
 
-//-- Functions --
-void executeWifiScan() {
-  int n = WiFi.scanNetworks(false, false);
-  if (n == 0) {
-    Serial.println("STATUS:BRAK_SIECI");
-  } else {
-    for (int i = 0; i < n; ++i) {
-      String ssid = WiFi.SSID(i);
-      int32_t rssi = WiFi.RSSI(i);
-      bool isProtected = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
-      String protectedStr = isProtected ? "1" : "0";
-      Serial.print(ssid);
-      Serial.print(",");
-      Serial.print(rssi);
-      Serial.print(",");
-      Serial.println(protectedStr);
-      delay(10);
+// --- FUNKCJE LOGIKI ---
+void updateSensorStatus(const char* id) {
+    bool found = false;
+    for (int i = 0; i < MAX_SENSORS; i++) {
+        if (strcmp(sensorRegistry[i].id, id) == 0) {
+            if (!sensorRegistry[i].isOnline) {
+                sensorRegistry[i].isOnline = true;
+                char topic[64];
+                snprintf(topic, sizeof(topic), "%s/%s/status", gateId.c_str(), id);
+                mqttClient.publish(topic, "online", true);
+            }
+            sensorRegistry[i].lastSeen = millis();
+            found = true;
+            break;
+        }
     }
+    if (!found) {
+        for (int i = 0; i < MAX_SENSORS; i++) {
+            if (sensorRegistry[i].id[0] == '\0') {
+                strncpy(sensorRegistry[i].id, id, 15);
+                sensorRegistry[i].lastSeen = millis();
+                sensorRegistry[i].isOnline = true;
+                break;
+            }
+        }
+    }
+}
+
+void checkOfflineSensors() {
+    unsigned long now = millis();
+    const unsigned long TIMEOUT = 600000; // 10 minut
+
+    for (int i = 0; i < MAX_SENSORS; i++) {
+        if (sensorRegistry[i].id[0] != '\0' && sensorRegistry[i].isOnline) {
+            if (now - sensorRegistry[i].lastSeen > TIMEOUT) {
+                sensorRegistry[i].isOnline = false;
+                char topic[64];
+                snprintf(topic, sizeof(topic), "%s/%s/status", gateId.c_str(), sensorRegistry[i].id);
+                mqttClient.publish(topic, "offline", true);
+            }
+        }
+    }
+}
+
+void reconnectMqtt() {
+    String statusTopicStr = gateId + "/status";
+    if (mqttClient.connect(gateId.c_str(), mqtt_user, mqtt_pass, statusTopicStr.c_str(), 1, true, "offline")) {
+        mqttClient.publish(statusTopicStr.c_str(), "online", true);
+    }
+}
+
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  // Obsługa wiadomości przychodzących z MQTT
+}
+
+// --- FUNKCJE WIFI
+bool connectToSavedWifi() {
+  preferences.begin("wifi", false);
+  int mode = preferences.getInt("mode", -1);
+  if (mode == -1) { preferences.end(); return false; }
+  String ssid = preferences.getString("last_ssid", "");
+  String pass = preferences.getString("last_password", "");
+  
+  if (mode == 0) {
+      IPAddress ip, gw, sub;
+      ip.fromString(preferences.getString("last_ip", ""));
+      gw.fromString(preferences.getString("last_gateway", ""));
+      sub.fromString(preferences.getString("last_subnet", ""));
+      WiFi.config(ip, gw, sub, IPAddress(8,8,8,8));
   }
-  Serial.println("SCAN_FINISHED");
-  WiFi.scanDelete();
+  WiFi.begin(ssid.c_str(), pass.c_str());
+  preferences.end();
+  return (WiFi.waitForConnectResult() == WL_CONNECTED);
+}
+
+void executeWifiScan() {
+    int n = WiFi.scanNetworks();
+    for (int i = 0; i < n; ++i) Serial.printf("%s,%d,%d\n", WiFi.SSID(i).c_str(), WiFi.RSSI(i), (WiFi.encryptionType(i) != WIFI_AUTH_OPEN));
+    WiFi.scanDelete();
 }
 
 void handleConnectionRequest(String cmd) {
@@ -345,99 +367,5 @@ void handleStaticConnectionRequest(String cmd) {
   } else {
     Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
-  }
-}
-
-void reconnectMqtt() {
-  if (WiFi.status() == WL_CONNECTED && !mqttClient.connected()) {
-    Serial.println("STATUS:MQTT_RECONNECTING...");
-    
-    String mac = WiFi.macAddress();
-    mac.replace(":", "");
-    String gateId = "gate_" + mac;
-    
-    String statusTopicStr = gateId + "/status";
-    const char* payloadOnline = "online";
-    const char* payloadOffline = "offline";
-    
-    if (mqttClient.connect(gateId.c_str(), mqtt_user, mqtt_pass, statusTopicStr.c_str(), 1, true, payloadOffline)) {
-      Serial.println("STATUS:MQTT_OK_RECONNECTED");
-      mqttClient.publish(statusTopicStr.c_str(), payloadOnline, true);
-    } else {
-      Serial.print("STATUS:MQTT_RECONNECT_FAILED, RC=");
-      Serial.println(mqttClient.state());
-    }
-  }
-}
-
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("MQTT_RCV:[");
-  Serial.print(topic);
-  Serial.print("]:");
-  for (unsigned int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-}
-
-bool connectToSavedWifi() {
-  preferences.begin("wifi", false);
-  mode = preferences.getInt("mode", -1);
-
-  if (mode == -1) {
-    Serial.println("STATUS:NO_SAVED_WIFI");
-    preferences.end();
-    return false;
-  }
-
-  String ssid = preferences.getString("last_ssid", "");
-  String password = preferences.getString("last_password", "");
-
-  if (ssid == "") {
-    Serial.println("STATUS:NO_SAVED_WIFI");
-    preferences.end();
-    return false;
-  }
-
-  if (mode == 0) {
-    String ip = preferences.getString("last_ip", "");
-    String gateway = preferences.getString("last_gateway", "");
-    String subnet = preferences.getString("last_subnet", "");
-
-    if (ip == "" || gateway == "" || subnet == "") {
-      Serial.println("STATUS:INCOMPLETE_STATIC_CONFIG");
-      preferences.end();
-      return false;
-    }
-
-    IPAddress local_IP, local_gateway, local_subnet;
-    IPAddress dns(8, 8, 8, 8);
-    
-    if (!local_IP.fromString(ip) || !local_gateway.fromString(gateway) || !local_subnet.fromString(subnet)) {
-      Serial.println("STATUS:ERROR_IP_PARSING");
-      preferences.end();
-      return false;
-    }
-
-    WiFi.config(local_IP, local_gateway, local_subnet, dns);
-  }
-
-  WiFi.begin(ssid.c_str(), password.c_str());
-  unsigned long startAttemptTime = millis();
-
-  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS) {
-    delay(500);
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("STATUS:WIFI_AUTO_CONNECTED;IP:");
-    Serial.println(WiFi.localIP().toString());
-    preferences.end();
-    return true;
-  } else {
-    Serial.println("STATUS:WIFI_AUTO_CONNECT_FAILED");
-    WiFi.disconnect();
-    preferences.end();
-    return false;
   }
 }
