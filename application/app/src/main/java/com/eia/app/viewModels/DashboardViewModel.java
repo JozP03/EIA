@@ -41,6 +41,8 @@ public class DashboardViewModel extends AndroidViewModel {
     private void observeMqttEvents() {
         MqttRepository.getInstance().getEventStream().observeForever(event -> {
             if (event == null) return;
+            
+            Log.d(TAG, "New mqtt event: " + event.getDeviceId() + " [" + event.getType() + "]");
 
             List<Device> currentList = devices.getValue();
             if (currentList == null) return;

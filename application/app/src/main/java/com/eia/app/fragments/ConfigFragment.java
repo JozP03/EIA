@@ -115,7 +115,7 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
                 command = "CONN_STATIC:" + ssid + ";" + password + ";" + ip + ";" + gateway + ";" + subnet + "\n";
             } else {
                 // Format dla DHCP
-                command = "CONN_DHCP:" + ssid + ";" + password + "\n";
+                command = "CONN:" + ssid + ";" + password + "\n";
             }
 
             if (isBound && usbService != null && usbService.isConnected()) {
