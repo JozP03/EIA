@@ -11,11 +11,11 @@ Preferences preferences;
 
 // --- KONFIGURACJA ---
 const int WIFI_TIMEOUT_MS = 25000;
-const char* mqtt_server = ""; 
+const char* mqtt_server = "";
 const int mqtt_port = 8883;
 const char* mqtt_user = "";
 const char* mqtt_pass = "";
-
+ 
 // Certyfikat ISRG Root X1
 const char* root_ca = \
   "-----BEGIN CERTIFICATE-----\n" \
@@ -219,7 +219,7 @@ void updateSensorStatus(const char* id) {
 
 void checkOfflineSensors() {
     unsigned long now = millis();
-    const unsigned long TIMEOUT = 600000; // 10 minut
+    const unsigned long TIMEOUT = 60000; // 1 minuta
 
     for (int i = 0; i < MAX_SENSORS; i++) {
         if (sensorRegistry[i].id[0] != '\0' && sensorRegistry[i].isOnline) {
@@ -289,10 +289,8 @@ void handleConnectionRequest(String cmd) {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    String mac = WiFi.macAddress();
-    mac.replace(":", "");
     Serial.print("STATUS:OK;ID:");
-    Serial.println("gate_" + mac);
+    Serial.println(gateId);
     
     delay(10);
     preferences.putInt("mode", 1);
@@ -350,10 +348,8 @@ void handleStaticConnectionRequest(String cmd) {
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    String mac = WiFi.macAddress();
-    mac.replace(":", "");
     Serial.print("STATUS:OK;ID:");
-    Serial.println("gate_" + mac);
+    Serial.println(gateId);
     
     delay(10);
     preferences.putInt("mode", 0);
