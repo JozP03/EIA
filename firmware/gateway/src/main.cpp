@@ -67,7 +67,7 @@ SensorStatus sensorRegistry[MAX_SENSORS];
 
 struct Message {
     char sensorId[12]; 
-    float floatValue;
+    char payloadData[32];
 };
 
 // --- PROTOTYPY ---
@@ -89,21 +89,23 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       std::string strManufacturerData = advertisedDevice.getManufacturerData();
       String data = String(strManufacturerData.c_str());
 
+      // Oczekujemy np. "ID:ESP_A1B2C3;T:22.5;U:60"
       if (data.startsWith("ID:")) {
         int semiColonIndex = data.indexOf(';');
         if (semiColonIndex != -1) {
           String idStr = data.substring(3, semiColonIndex);
-          int tIndex = data.indexOf("T:", semiColonIndex);
-          if (tIndex != -1) {
-            float temp = data.substring(tIndex + 2).toFloat();
-            Message msg;
-            memset(msg.sensorId, 0, sizeof(msg.sensorId));
-            strncpy(msg.sensorId, idStr.c_str(), sizeof(msg.sensorId) - 1);
-            msg.floatValue = temp;
+          
+          // Wszystko po pierwszym sredniku
+          String restOfData = data.substring(semiColonIndex + 1);
 
-            updateSensorStatus(msg.sensorId);
-            xQueueSend(valueQueue, &msg, 0);
-          }
+          Message msg;
+          memset(&msg, 0, sizeof(Message));
+          
+          strncpy(msg.sensorId, idStr.c_str(), sizeof(msg.sensorId) - 1);
+          strncpy(msg.payloadData, restOfData.c_str(), sizeof(msg.payloadData) - 1);
+
+          updateSensorStatus(msg.sensorId);
+          xQueueSend(valueQueue, &msg, 0);
         }
       }
     }
@@ -181,7 +183,8 @@ void mqttTask(void *pvParameters) {
                 while (xQueueReceive(valueQueue, &msg, 0) == pdTRUE) {
                     char topic[64];
                     snprintf(topic, sizeof(topic), "%s/%s", gateId.c_str(), msg.sensorId);
-                    mqttClient.publish(topic, String(msg.floatValue, 1).c_str());
+                    mqttClient.publish(topic, msg.payloadData);
+                    Serial.printf("MQTT_PUB: [%s] -> %s\n", topic, msg.payloadData);
                 }
             }
         }

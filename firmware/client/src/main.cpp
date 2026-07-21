@@ -10,6 +10,7 @@ float mockTemperature = 22.0;
 String uniqueSensorName = "";
 unsigned long lastSendTime = 0; 
 const unsigned long sendInterval = 30000; // 30 sekund
+const char* Defunit = "°C";
 
 void setup() {
   Serial.begin(115200);
@@ -38,7 +39,7 @@ void loop() {
     mockTemperature += 0.1;
     if(mockTemperature > 28.0) mockTemperature = 22.0;
 
-    String payload = "ID:" + uniqueSensorName + ";T:" + String(mockTemperature, 1);
+    String payload = "ID:" + uniqueSensorName + ";T:" + String(mockTemperature, 1) + ";U:" + String(Defunit);
     
     pAdvertising->stop();
 
