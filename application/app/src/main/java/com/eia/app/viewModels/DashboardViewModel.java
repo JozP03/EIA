@@ -40,18 +40,20 @@ public class DashboardViewModel extends AndroidViewModel {
 
     private void observeMqttEvents() {
         MqttRepository.getInstance().getEventStream().observeForever(event -> {
-            if (event == null) return;
+            if (event == null || event.getDeviceId() == null) return;
             
-            Log.d(TAG, "New mqtt event: " + event.getDeviceId() + " [" + event.getType() + "]");
+            Log.d(TAG, "Nowy event MQTT: " + event.getDeviceId() + " [" + event.getType() + "]");
 
             List<Device> currentList = devices.getValue();
             if (currentList == null) return;
 
             List<Device> newList = new ArrayList<>();
+            boolean deviceFound = false;
             boolean anyUpdated = false;
 
             for (Device device : currentList) {
                 if (device.getId().equals(event.getDeviceId())) {
+                    deviceFound = true;
                     Device updatedDevice = device.copy();
                     if (event.getType() == MqttEvent.Type.STATUS) {
                         boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
@@ -68,6 +70,22 @@ public class DashboardViewModel extends AndroidViewModel {
                 } else {
                     newList.add(device);
                 }
+            }
+
+            //jeśli urządzenia nie ma na liście
+            if (!deviceFound && currentList.size() < 5) {
+                Log.d(TAG, "new device: " + event.getDeviceId());
+                Device newDevice = new Device(event.getDeviceId(), "Bramka " + event.getDeviceId());
+                
+                if (event.getType() == MqttEvent.Type.STATUS) {
+                    boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
+                    newDevice.setOnline(isOnline);
+                } else if (event.getType() == MqttEvent.Type.DATA) {
+                    updateSensorData(newDevice, event.getSensorId(), event.getPayload());
+                }
+                
+                newList.add(newDevice);
+                anyUpdated = true;
             }
 
             if (anyUpdated) {

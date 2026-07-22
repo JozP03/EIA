@@ -84,9 +84,14 @@ public class MqttRepository {
 
     public void disconnectFromBroker(){
         if (client != null) {
-            Log.d(TAG,"Rozłączono z MQTT");
+            Log.d(TAG,"Definitywne rozłączanie z MQTT...");
             client.disconnect();
+            client = null;
         }
+        this.host = "";
+        this.username = "";
+        this.password = "";
+        eventStream.postValue(null);
     }
 
     public void publishCommand(String topic, String jsonPayload) {
