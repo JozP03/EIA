@@ -41,34 +41,44 @@ public class DashboardViewModel extends AndroidViewModel {
     private void observeMqttEvents() {
         MqttRepository.getInstance().getEventStream().observeForever(event -> {
             if (event == null) return;
+            
+            Log.d(TAG, "New mqtt event: " + event.getDeviceId() + " [" + event.getType() + "]");
 
             List<Device> currentList = devices.getValue();
             if (currentList == null) return;
 
-            boolean updated = false;
+            List<Device> newList = new ArrayList<>();
+            boolean anyUpdated = false;
+
             for (Device device : currentList) {
                 if (device.getId().equals(event.getDeviceId())) {
+                    Device updatedDevice = device.copy();
                     if (event.getType() == MqttEvent.Type.STATUS) {
                         boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
-                        device.setOnline(isOnline);
-                        updated = true;
+                        updatedDevice.setOnline(isOnline);
+                        newList.add(updatedDevice);
+                        anyUpdated = true;
                     } else if (event.getType() == MqttEvent.Type.DATA) {
-                        updateSensorData(device, event.getSensorId(), event.getPayload());
-                        updated = true;
+                        updateSensorData(updatedDevice, event.getSensorId(), event.getPayload());
+                        newList.add(updatedDevice);
+                        anyUpdated = true;
+                    } else {
+                        newList.add(device);
                     }
-                    break;
+                } else {
+                    newList.add(device);
                 }
             }
 
-            if (updated) {
-                devices.setValue(new ArrayList<>(currentList));
-                persistDevices(currentList);
+            if (anyUpdated) {
+                devices.setValue(newList);
+                persistDevices(newList);
             }
         });
     }
 
     private void updateSensorData(Device device, String sensorId, String payload) {
-        if (sensorId == null) return;
+        if (sensorId == null || payload == null) return;
         
         List<Sensor> sensors = device.getSensorList();
         if (sensors == null) {
@@ -76,20 +86,33 @@ public class DashboardViewModel extends AndroidViewModel {
             device.setSensorList(sensors);
         }
 
-        boolean found = false;
         try {
-            float value = Float.parseFloat(payload.trim());
+            String valueStr = payload.trim();
+            String unit = "°C"; // Domyślna jednostka
+
+            if (valueStr.contains(";")) {
+                String[] parts = valueStr.split(";");
+                if (parts.length >= 2) {
+                    valueStr = parts[0].trim();
+                    unit = parts[1].trim();
+                }
+            }
+
+            float value = Float.parseFloat(valueStr);
+            boolean found = false;
+
             for (Sensor s : sensors) {
                 if (s.getId().equals(sensorId)) {
                     s.setValue(value);
+                    s.setUnit(unit);
                     found = true;
                     break;
                 }
             }
 
             if (!found) {
-                // Auto-discovery: jeśli nie znamy sensora, dodajemy go (tymczasowe założenie typu)
-                sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, "---", value));
+                // Nowy sensor z id, typem (UNKNOWN), nazwą (sensorId), jednostką i wartością
+                sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, unit, value));
             }
         } catch (NumberFormatException e) {
             Log.e(TAG, "Błąd formatu danych sensora: " + payload);
@@ -134,6 +157,12 @@ public class DashboardViewModel extends AndroidViewModel {
             devices.setValue(new ArrayList<>(currentList));
             persistDevices(currentList);
         }
+    }
+
+    public void clearAllDevices() {
+        List<Device> emptyList = new ArrayList<>();
+        devices.setValue(emptyList);
+        persistDevices(emptyList);
     }
 
     private void persistDevices(List<Device> list) {

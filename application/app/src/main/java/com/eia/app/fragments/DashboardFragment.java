@@ -38,10 +38,15 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        viewModel = new ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
+    }
 
-        viewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
-
-        viewModel.initMqttConnection();
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (viewModel != null) {
+            viewModel.initMqttConnection();
+        }
     }
 
     @Override
@@ -110,7 +115,7 @@ public class DashboardFragment extends Fragment {
 
         viewModel.getDevices().observe(getViewLifecycleOwner(), newDevices -> {
             if (newDevices != null) {
-                // ListAdapter automatycznie obliczy różnice i zrobi animacje
+                // ListAdapter
                 adapter.submitList(new ArrayList<>(newDevices));
 
                 // Obsługa napisu pustej listy

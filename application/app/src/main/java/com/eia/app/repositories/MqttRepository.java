@@ -17,6 +17,7 @@ public class MqttRepository {
     
     private final MutableLiveData<MqttEvent> eventStream = new MutableLiveData<>();
 
+    private String host = "";
     private String username = "";
     private String password = "";
     private Mqtt5AsyncClient client;
@@ -36,6 +37,7 @@ public class MqttRepository {
             Log.e(TAG, "Server host cannot be null or empty.");
             return;
         }
+        this.host = host;
         this.username = username;
         this.password = password;
 
@@ -45,12 +47,23 @@ public class MqttRepository {
                 .serverHost(host)
                 .serverPort(8883)
                 .sslWithDefaultConfig()
+                .automaticReconnectWithDefaultConfig()
+                .addConnectedListener(context -> {
+                    Log.d(TAG, "Połączono (lub połączono ponownie)");
+                    subscribeTopics();
+                })
+                .addDisconnectedListener(context -> Log.w(TAG, "Rozłączono: " + (context.getCause() != null ? context.getCause().getMessage() : "brak powodu")))
                 .buildAsync();
     }
 
     public void connectToBroker(){
         if (client == null) {
             Log.e(TAG, "Klient MQTT nie został skonfigurowany!");
+            return;
+        }
+
+        if (client.getState().isConnected()) {
+            Log.d(TAG, "MQTT już połączone.");
             return;
         }
 
@@ -64,8 +77,7 @@ public class MqttRepository {
                     if(throwable != null){
                         Log.e(TAG,"Błąd połączenia z MQTT: " + throwable.getMessage());
                     }else {
-                        Log.d(TAG,"Połączono z MQTT");
-                        subscribeTopics();
+                        Log.d(TAG,"Wysłano żądanie połączenia MQTT");
                     }
                 }));
     }
@@ -91,10 +103,9 @@ public class MqttRepository {
             Log.e(TAG, "Cannot subscribe: Client is null");
             return;
         }
-        
-        // Subskrypcja na wszystko
-        // gate_1/status
-        // gate_1/sensor/temp_1/state
+
+        // Format statusu bramki: deviceid/status
+        // Format danych sensora: deviceid/sensorid
         client.subscribeWith()
                 .topicFilter("#")
                 .callback(publish -> {
@@ -102,21 +113,32 @@ public class MqttRepository {
                     String payload = new String(publish.getPayloadAsBytes());
                     
                     String[] parts = topic.split("/");
-                    if (parts.length >= 2) {
+                    if (parts.length == 2) {
                         String deviceId = parts[0];
+                        String secondPart = parts[1];
                         
-                        if (topic.endsWith("/status")) {
+                        if (secondPart.equals("status")) {
+                            // deviceid/status
                             eventStream.postValue(new MqttEvent(deviceId, null, payload, MqttEvent.Type.STATUS));
-                        } else if (topic.contains("/sensor/") && topic.endsWith("/state")) {
-                            // Format: DEVICE_ID/sensor/SENSOR_ID/state
-                            if (parts.length >= 3) {
-                                String sensorId = parts[2];
-                                eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
-                            }
+                        } else {
+                            // deviceid/sensorid
+                            eventStream.postValue(new MqttEvent(deviceId, secondPart, payload, MqttEvent.Type.DATA));
                         }
+                    } else if (parts.length == 3) {
+                        // Opcjonalne wsparcie dla formatu deviceid/sensorid/value
+                        String deviceId = parts[0];
+                        String sensorId = parts[1];
+                        eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
                     }
                 })
-                .send();
+                .send()
+                .whenComplete((subAck, throwable) -> {
+                    if (throwable != null) {
+                        Log.e(TAG, "Błąd subskrypcji: " + throwable.getMessage());
+                    } else {
+                        Log.d(TAG, "Subskrypcja aktywna");
+                    }
+                });
     }
 
     public LiveData<MqttEvent> getEventStream(){

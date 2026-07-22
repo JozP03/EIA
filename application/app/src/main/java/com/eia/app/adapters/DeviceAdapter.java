@@ -86,8 +86,7 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
 
         @Override
         public boolean areContentsTheSame(@NonNull Device oldItem, @NonNull Device newItem) {
-            return oldItem.getName().equals(newItem.getName()) && 
-                   oldItem.isOnline() == newItem.isOnline();
+            return oldItem.equals(newItem);
         }
     }
 

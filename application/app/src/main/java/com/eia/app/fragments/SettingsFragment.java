@@ -82,22 +82,22 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.btnReset).setOnClickListener(v -> {
             new android.app.AlertDialog.Builder(requireContext())
                     .setTitle("Resetowanie konfiguracji")
-                    .setMessage("Czy na pewno chcesz usunąć ustawienia i skonfigurować wszystkie urządzenia ponownie?")
+                    .setMessage("Czy na pewno chcesz usunąć wszystkie ustawienia i urządzenia?")
                     .setPositiveButton("Tak", (dialog, which) -> {
-                        // Czyszczenie ustawień ogólnych
+                        // 1. Czyszczenie ustawień ogólnych i AI
                         requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE)
                                 .edit()
                                 .clear()
                                 .apply();
 
-                        // Czyszczenie listy urządzeń
-                        requireActivity().getSharedPreferences("EIA_DEVICES_PREFS", android.content.Context.MODE_PRIVATE)
-                                .edit()
-                                .clear()
-                                .apply();
+                        // 2. Czyszczenie listy urządzeń (bramek) przez ViewModel
+                        DashboardViewModel dashboardViewModel = new androidx.lifecycle.ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
+                        dashboardViewModel.clearAllDevices();
 
-                        MqttRepository.getInstance().disconnectFromBroker();
+                        // 3. Rozłączanie MQTT
+                        mqtt.disconnectFromBroker();
 
+                        // 4. Powrót do ekranu początkowego
                         androidx.navigation.Navigation.findNavController(view)
                                 .navigate(R.id.connectionFragment);
                     })
