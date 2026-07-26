@@ -11,10 +11,10 @@ Preferences preferences;
 
 // --- KONFIGURACJA ---
 const int WIFI_TIMEOUT_MS = 25000;
-const char* mqtt_server = "";
-const int mqtt_port = 8883;
-const char* mqtt_user = "";
-const char* mqtt_pass = "";
+String mqtt_server = "";
+int mqtt_port = 8883;
+String mqtt_user = "";
+String mqtt_pass = "";
  
 // Certyfikat ISRG Root X1
 const char* root_ca = \
@@ -120,7 +120,7 @@ void setup() {
 
   valueQueue = xQueueCreate(10, sizeof(Message));
   espClient.setCACert(root_ca);
-  mqttClient.setServer(mqtt_server, mqtt_port);
+  mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
   mqttClient.setCallback(mqttCallback);
 
   BLEDevice::init("");
@@ -240,7 +240,7 @@ void checkOfflineSensors() {
 
 void reconnectMqtt() {
     String statusTopicStr = gateId + "/status";
-    if (mqttClient.connect(gateId.c_str(), mqtt_user, mqtt_pass, statusTopicStr.c_str(), 1, true, "offline")) {
+    if (mqttClient.connect(gateId.c_str(), mqtt_user.c_str(), mqtt_pass.c_str(), statusTopicStr.c_str(), 1, true, "offline")) {
         mqttClient.publish(statusTopicStr.c_str(), "online", true);
     }
 }
@@ -379,8 +379,21 @@ void handleMqttConfig(String cmd) {
   int s2 = data.indexOf(';', s1 + 1);
   int s3 = data.indexOf(';', s2 + 1);
 
-  String server = data.substring(0, s1);
-  int port = data.substring(s1 + 1, s2).toInt();
-  String user = data.substring(s2 + 1, s3);
-  String pass = data.substring(s3 + 1);
+  mqtt_server = data.substring(0, s1);
+  mqtt_port = data.substring(s1 + 1, s2).toInt();
+  mqtt_user = data.substring(s2 + 1, s3);
+  mqtt_pass = data.substring(s3 + 1);
+
+  preferences.begin("mqtt", false);
+
+  preferences.putString("server", mqtt_server);
+  preferences.putInt("port", mqtt_port);
+  preferences.putString("user", mqtt_user);
+  preferences.putString("pass", mqtt_pass);
+
+  preferences.end();
+
+  mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+  
+  Serial.println("STATUS:MQTT_CONFIG_SAVED");  
 }
