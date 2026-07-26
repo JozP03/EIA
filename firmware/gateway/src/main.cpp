@@ -79,6 +79,7 @@ bool connectToSavedWifi();
 void executeWifiScan();
 void handleConnectionRequest(String cmd);
 void handleStaticConnectionRequest(String cmd);
+void handleMqttConfig(String cmd);
 void bleTask(void *pvParameters);
 void mqttTask(void *pvParameters);
 
@@ -149,6 +150,7 @@ void loop() {
     else if (input.equalsIgnoreCase("RESET")) {
         preferences.begin("wifi", false); preferences.clear(); preferences.end(); ESP.restart();
     }
+    else if (input.startsWith("MQTT:")) handleMqttConfig(input);
   }
   delay(100);
 }
@@ -367,4 +369,18 @@ void handleStaticConnectionRequest(String cmd) {
     Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
   }
+}
+
+void handleMqttConfig(String cmd) {
+  // Oczekiwany formata: "MQTT:server;port;user;pass"
+  String data = cmd.substring(5);
+  
+  int s1 = data.indexOf(';');
+  int s2 = data.indexOf(';', s1 + 1);
+  int s3 = data.indexOf(';', s2 + 1);
+
+  String server = data.substring(0, s1);
+  int port = data.substring(s1 + 1, s2).toInt();
+  String user = data.substring(s2 + 1, s3);
+  String pass = data.substring(s3 + 1);
 }
