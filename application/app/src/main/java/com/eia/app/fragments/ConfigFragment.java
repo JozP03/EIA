@@ -197,23 +197,13 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
                     }
                 }
 
-                // Dodanie urządzenia do listy
-                com.eia.app.viewModels.DashboardViewModel viewModel = 
-                        new androidx.lifecycle.ViewModelProvider(requireActivity()).get(com.eia.app.viewModels.DashboardViewModel.class);
-
-                Device newDevice = new Device(deviceId, "Bramka " + ssid);
-                viewModel.saveDevice(newDevice);
-
-                // Zamykamy port i zatrzymujemy serwis USB
-                if (usbService != null) {
-                    usbService.closePort();
-                }
-                Intent stopIntent = new Intent(getContext(), UsbSerialService.class);
-                requireActivity().stopService(stopIntent);
-
-                // Przejście do dashboardu
+                // Przejście do personalizacji (DeviceSetupFragment)
                 if (getView() != null) {
-                    Navigation.findNavController(getView()).navigate(R.id.action_configFragment_to_dashboardFragment);
+                    Bundle args = new Bundle();
+                    args.putString("deviceId", deviceId);
+                    args.putString("ssid", ssid);
+                    
+                    Navigation.findNavController(getView()).navigate(R.id.action_configFragment_to_deviceSetupFragment, args);
                 }
             } else if (line.startsWith("STATUS:ERROR_TIMEOUT")) {
                 Toast.makeText(getContext(), "Błąd: Przekroczono czas połączenia", Toast.LENGTH_LONG).show();

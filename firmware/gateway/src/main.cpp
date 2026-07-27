@@ -82,6 +82,7 @@ void handleStaticConnectionRequest(String cmd);
 void handleMqttConfig(String cmd);
 void bleTask(void *pvParameters);
 void mqttTask(void *pvParameters);
+void loadMqttConfig();
 
 // --- CALLBACK BLE ---
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
@@ -134,6 +135,12 @@ void setup() {
   gateId = "gate_" + WiFi.macAddress();
   gateId.replace(":", "");
 
+  loadMqttConfig();
+  if (mqtt_server.length() > 0) {
+      mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+  }
+  mqttClient.setCallback(mqttCallback);
+  
   connectToSavedWifi();
 
   xTaskCreate(bleTask, "BLE_TASK", 6000, NULL, 1, NULL);
@@ -170,7 +177,7 @@ void mqttTask(void *pvParameters) {
     static unsigned long lastCheckTime = 0;
 
     while (true) {
-        if (WiFi.status() == WL_CONNECTED) {
+        if (WiFi.status() == WL_CONNECTED && mqtt_server.length() > 0) {
             if (!mqttClient.connected()) {
                 if (millis() - lastReconnectAttempt > 5000) {
                     lastReconnectAttempt = millis();
@@ -394,6 +401,17 @@ void handleMqttConfig(String cmd) {
   preferences.end();
 
   mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+
+  mqttClient.disconnect();
   
   Serial.println("STATUS:MQTT_CONFIG_SAVED");  
+}
+
+void loadMqttConfig() {
+  preferences.begin("mqtt", true);
+  mqtt_server = preferences.getString("server", "");
+  mqtt_port = preferences.getInt("port", 8883);
+  mqtt_user = preferences.getString("user", "");
+  mqtt_pass = preferences.getString("pass", "");
+  preferences.end();
 }
