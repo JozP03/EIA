@@ -105,17 +105,39 @@ public class DashboardViewModel extends AndroidViewModel {
         }
 
         try {
-            String valueStr = payload.trim();
+            String valueStr = "";
             String unit = "°C"; // Domyślna jednostka
+            String trimmedPayload = payload.trim();
 
-            if (valueStr.contains(";")) {
-                String[] parts = valueStr.split(";");
-                if (parts.length >= 2) {
+            if (trimmedPayload.contains(";")) {
+                String[] parts = trimmedPayload.split(";");
+                boolean foundT = false;
+                for (String part : parts) {
+                    String p = part.trim();
+                    if (p.startsWith("T:")) {
+                        valueStr = p.substring(2);
+                        foundT = true;
+                    } else if (p.startsWith("U:")) {
+                        unit = p.substring(2);
+                    }
+                }
+                // Fallback dla starego formatu: wartość;jednostka
+                if (!foundT && parts.length >= 1) {
                     valueStr = parts[0].trim();
-                    unit = parts[1].trim();
+                    if (parts.length >= 2 && !parts[1].trim().startsWith("U:")) {
+                        unit = parts[1].trim();
+                    }
+                }
+            } else {
+                // Brak średnika - sprawdź T: lub samą liczbę
+                if (trimmedPayload.startsWith("T:")) {
+                    valueStr = trimmedPayload.substring(2);
+                } else {
+                    valueStr = trimmedPayload;
                 }
             }
 
+            if (valueStr.isEmpty()) return;
             float value = Float.parseFloat(valueStr);
             boolean found = false;
 
