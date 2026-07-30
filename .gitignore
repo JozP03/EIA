@@ -16,3 +16,4 @@ firmware/client/include/README
 firmware/gateway/include/README
 firmware/gateway/lib/README
 firmware/gateway/test/README
+/application/.artifacts

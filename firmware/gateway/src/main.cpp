@@ -11,10 +11,10 @@ Preferences preferences;
 
 // --- KONFIGURACJA ---
 const int WIFI_TIMEOUT_MS = 25000;
-const char* mqtt_server = "";
-const int mqtt_port = 8883;
-const char* mqtt_user = "";
-const char* mqtt_pass = "";
+String mqtt_server = "";
+int mqtt_port = 8883;
+String mqtt_user = "";
+String mqtt_pass = "";
  
 // Certyfikat ISRG Root X1
 const char* root_ca = \
@@ -79,8 +79,10 @@ bool connectToSavedWifi();
 void executeWifiScan();
 void handleConnectionRequest(String cmd);
 void handleStaticConnectionRequest(String cmd);
+void handleMqttConfig(String cmd);
 void bleTask(void *pvParameters);
 void mqttTask(void *pvParameters);
+void loadMqttConfig();
 
 // --- CALLBACK BLE ---
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
@@ -119,7 +121,7 @@ void setup() {
 
   valueQueue = xQueueCreate(10, sizeof(Message));
   espClient.setCACert(root_ca);
-  mqttClient.setServer(mqtt_server, mqtt_port);
+  mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
   mqttClient.setCallback(mqttCallback);
 
   BLEDevice::init("");
@@ -133,6 +135,12 @@ void setup() {
   gateId = "gate_" + WiFi.macAddress();
   gateId.replace(":", "");
 
+  loadMqttConfig();
+  if (mqtt_server.length() > 0) {
+      mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+  }
+  mqttClient.setCallback(mqttCallback);
+  
   connectToSavedWifi();
 
   xTaskCreate(bleTask, "BLE_TASK", 6000, NULL, 1, NULL);
@@ -149,6 +157,7 @@ void loop() {
     else if (input.equalsIgnoreCase("RESET")) {
         preferences.begin("wifi", false); preferences.clear(); preferences.end(); ESP.restart();
     }
+    else if (input.startsWith("MQTT:")) handleMqttConfig(input);
   }
   delay(100);
 }
@@ -168,7 +177,7 @@ void mqttTask(void *pvParameters) {
     static unsigned long lastCheckTime = 0;
 
     while (true) {
-        if (WiFi.status() == WL_CONNECTED) {
+        if (WiFi.status() == WL_CONNECTED && mqtt_server.length() > 0) {
             if (!mqttClient.connected()) {
                 if (millis() - lastReconnectAttempt > 5000) {
                     lastReconnectAttempt = millis();
@@ -238,7 +247,7 @@ void checkOfflineSensors() {
 
 void reconnectMqtt() {
     String statusTopicStr = gateId + "/status";
-    if (mqttClient.connect(gateId.c_str(), mqtt_user, mqtt_pass, statusTopicStr.c_str(), 1, true, "offline")) {
+    if (mqttClient.connect(gateId.c_str(), mqtt_user.c_str(), mqtt_pass.c_str(), statusTopicStr.c_str(), 1, true, "offline")) {
         mqttClient.publish(statusTopicStr.c_str(), "online", true);
     }
 }
@@ -367,4 +376,42 @@ void handleStaticConnectionRequest(String cmd) {
     Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
   }
+}
+
+void handleMqttConfig(String cmd) {
+  // Oczekiwany formata: "MQTT:server;port;user;pass"
+  String data = cmd.substring(5);
+  
+  int s1 = data.indexOf(';');
+  int s2 = data.indexOf(';', s1 + 1);
+  int s3 = data.indexOf(';', s2 + 1);
+
+  mqtt_server = data.substring(0, s1);
+  mqtt_port = data.substring(s1 + 1, s2).toInt();
+  mqtt_user = data.substring(s2 + 1, s3);
+  mqtt_pass = data.substring(s3 + 1);
+
+  preferences.begin("mqtt", false);
+
+  preferences.putString("server", mqtt_server);
+  preferences.putInt("port", mqtt_port);
+  preferences.putString("user", mqtt_user);
+  preferences.putString("pass", mqtt_pass);
+
+  preferences.end();
+
+  mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
+
+  mqttClient.disconnect();
+  
+  Serial.println("STATUS:MQTT_CONFIG_SAVED");  
+}
+
+void loadMqttConfig() {
+  preferences.begin("mqtt", true);
+  mqtt_server = preferences.getString("server", "");
+  mqtt_port = preferences.getInt("port", 8883);
+  mqtt_user = preferences.getString("user", "");
+  mqtt_pass = preferences.getString("pass", "");
+  preferences.end();
 }
