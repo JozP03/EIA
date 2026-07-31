@@ -3,6 +3,21 @@
 #include <BLEUtils.h>
 #include <BLEAdvertising.h>
 #include <WiFi.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_AHTX0.h>
+#include <Adafruit_BMP280.h>
+
+#define LED_PIN 8
+#define I2C_SDA 2
+#define I2C_SCL 3
+
+Adafruit_BMP280 bmp;
+Adafruit_AHTX0 aht;
+
+//flagi czunika
+bool hasBMP = false;
+bool hasAHT = false;
 
 BLEAdvertising *pAdvertising;
 float mockTemperature = 22.0;
@@ -12,14 +27,20 @@ unsigned long lastSendTime = 0;
 const unsigned long sendInterval = 30000; // 30 sekund
 const char* Defunit = "°C";
 
-void setup() {
-  Serial.begin(115200);
-  
+bool checkI2C(uint8_t address) {
+  Wire.beginTransmission(address);
+  return (Wire.endTransmission() == 0);
+}
+
+void setId() {
   String mac = WiFi.macAddress();
   mac.replace(":", "");
   uniqueSensorName = "ESP_" + mac.substring(mac.length() - 6);
-  
-  Serial.println("Unikalna nazwa: " + uniqueSensorName);
+}
+
+void setup() {
+  Serial.begin(115200);
+  setId();
 
   BLEDevice::init("");
   pAdvertising = BLEDevice::getAdvertising();
