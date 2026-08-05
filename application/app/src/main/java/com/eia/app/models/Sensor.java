@@ -6,13 +6,19 @@ public class Sensor {
     private String name;
     private String unit;
     private float value;
+    private boolean hasError;
 
-    public Sensor(String id,String type, String name, String unit, float value) {
+    public Sensor(String id, String type, String name, String unit, float value) {
+        this(id, type, name, unit, value, false);
+    }
+
+    public Sensor(String id, String type, String name, String unit, float value, boolean hasError) {
         this.id = id;
         this.type = type;
         this.name = name;
         this.unit = unit;
         this.value = value;
+        this.hasError = hasError;
     }
 
     public String getId() {
@@ -55,12 +61,21 @@ public class Sensor {
         this.value = value;
     }
 
+    public boolean isHasError() {
+        return hasError;
+    }
+
+    public void setHasError(boolean hasError) {
+        this.hasError = hasError;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Sensor sensor = (Sensor) o;
         return Float.compare(sensor.value, value) == 0 &&
+                hasError == sensor.hasError &&
                 id.equals(sensor.id) &&
                 type.equals(sensor.type) &&
                 name.equals(sensor.name) &&
@@ -69,6 +84,6 @@ public class Sensor {
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(id, type, name, unit, value);
+        return java.util.Objects.hash(id, type, name, unit, value, hasError);
     }
 }

@@ -64,12 +64,22 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
                 android.widget.TextView tvValue = sensorView.findViewById(R.id.tvSensorValue);
                 android.widget.ImageView ivIcon = sensorView.findViewById(R.id.ivSensorIcon);
 
-                tvName.setText(sensor.getName());
-
-                // Format (np. "22.5 °C")
-                String formattedValue = String.format(java.util.Locale.getDefault(),
-                        "%.1f %s", sensor.getValue(), sensor.getUnit());
-                tvValue.setText(formattedValue);
+                if (sensor.isHasError()) {
+                    tvName.setText("Brak sensora");
+                    tvValue.setText("--");
+                    ivIcon.setImageResource(android.R.drawable.stat_notify_error);
+                    ivIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                            holder.itemView.getContext().getColor(R.color.accent_red)));
+                } else {
+                    tvName.setText(sensor.getName());
+                    // Format (np. "22.5 °C")
+                    String formattedValue = String.format(java.util.Locale.getDefault(),
+                            "%.1f %s", sensor.getValue(), sensor.getUnit());
+                    tvValue.setText(formattedValue);
+                    ivIcon.setImageResource(android.R.drawable.ic_menu_compass);
+                    ivIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                            holder.itemView.getContext().getColor(R.color.accent_blue)));
+                }
 
                 holder.sensorsContainer.addView(sensorView);
             }

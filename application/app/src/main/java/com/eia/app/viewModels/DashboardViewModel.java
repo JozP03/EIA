@@ -109,6 +109,23 @@ public class DashboardViewModel extends AndroidViewModel {
             String unit = "°C"; // Domyślna jednostka
             String trimmedPayload = payload.trim();
 
+            if ("ERR:NoSensors".equals(trimmedPayload)) {
+                boolean found = false;
+                for (Sensor s : sensors) {
+                    if (s.getId().equals(sensorId)) {
+                        s.setHasError(true);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    Sensor s = new Sensor(sensorId, "UNKNOWN", sensorId, "---", 0);
+                    s.setHasError(true);
+                    sensors.add(s);
+                }
+                return;
+            }
+
             if (trimmedPayload.contains(";")) {
                 String[] parts = trimmedPayload.split(";");
                 boolean foundT = false;
@@ -145,6 +162,7 @@ public class DashboardViewModel extends AndroidViewModel {
                 if (s.getId().equals(sensorId)) {
                     s.setValue(value);
                     s.setUnit(unit);
+                    s.setHasError(false);
                     found = true;
                     break;
                 }
@@ -152,7 +170,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
             if (!found) {
                 // Nowy sensor z id, typem (UNKNOWN), nazwą (sensorId), jednostką i wartością
-                sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, unit, value));
+                sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, unit, value, false));
             }
         } catch (NumberFormatException e) {
             Log.e(TAG, "Błąd formatu danych sensora: " + payload);
