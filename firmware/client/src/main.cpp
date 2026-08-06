@@ -21,7 +21,6 @@ bool hasAHT = false;
 
 struct Metric {
   String prefix;
-  String unit;
   float value;
   int decimals;
 };
@@ -31,17 +30,17 @@ struct SensorDevice {
   String name;
   bool isActive;
   int metricCount;
-  Metric metrics[2];
+  Metric metrics[2]; 
 };
 
 SensorDevice mySensors[2] = {
-  { 
-    0x38, "AHT20", false, 2, 
-    { {"T", "C", 0.0, 1}, {"H", "%", 0.0, 0} }
+  {
+    0x38, "AHT20", false, 2,
+    { {"T", 0.0, 1}, {"H", 0.0, 0} }
   },
-  { 
-    0x76, "BMP280", false, 1, 
-    { {"P", "hPa", 0.0, 0}, {"", "", 0.0, 0} }
+  {
+    0x76, "BMP280", false, 1,
+    { {"P", 0.0, 0}}
   }
 };
 
