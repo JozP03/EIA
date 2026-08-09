@@ -92,10 +92,10 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       String data = String(strManufacturerData.c_str());
 
       // Oczekujemy np. "ID:ESP_A1B2C3;T:22.5;U:60"
-      if (data.startsWith("ID:")) {
+      if (data.startsWith("ESP_")) {
         int semiColonIndex = data.indexOf(';');
         if (semiColonIndex != -1) {
-          String idStr = data.substring(3, semiColonIndex);
+          String idStr = data.substring(0, semiColonIndex);
           
           // Wszystko po pierwszym sredniku
           String restOfData = data.substring(semiColonIndex + 1);
