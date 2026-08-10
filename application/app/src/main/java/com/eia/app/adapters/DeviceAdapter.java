@@ -19,14 +19,20 @@ import java.util.List;
 
 public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder> {
     private final OnDeviceClickListener clickListener;
+    private final OnDeviceLongClickListener longClickListener;
 
     public interface OnDeviceClickListener {
         void onDeviceClick(Device device);
     }
 
-    public DeviceAdapter(OnDeviceClickListener clickListener) {
+    public interface OnDeviceLongClickListener {
+        void onDeviceLongClick(Device device);
+    }
+
+    public DeviceAdapter(OnDeviceClickListener clickListener, OnDeviceLongClickListener longClickListener) {
         super(new DiffCallback());
         this.clickListener = clickListener;
+        this.longClickListener = longClickListener;
     }
 
     @NonNull
@@ -86,6 +92,10 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
         }
 
         holder.itemView.setOnClickListener(v -> clickListener.onDeviceClick(device));
+        holder.itemView.setOnLongClickListener(v -> {
+            longClickListener.onDeviceLongClick(device);
+            return true;
+        });
     }
 
     static class DiffCallback extends DiffUtil.ItemCallback<Device> {

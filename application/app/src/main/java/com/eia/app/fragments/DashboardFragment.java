@@ -26,6 +26,7 @@ import com.eia.app.adapters.DeviceAdapter;
 import com.eia.app.models.Device;
 import com.eia.app.repositories.MqttRepository;
 import com.eia.app.viewModels.DashboardViewModel;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 public class DashboardFragment extends Fragment {
 
@@ -106,8 +107,10 @@ public class DashboardFragment extends Fragment {
         TextView tvEmpty = view.findViewById(R.id.tvEmptyList);
 
         com.eia.app.adapters.DeviceAdapter adapter = new com.eia.app.adapters.DeviceAdapter(device -> {
-           // przejście do szczegółów urządzenia
+            // przejście do szczegółów urządzenia
             Log.d("DashboardFragment", "Kliknięcie na urządzenie: " + device.getName());
+        }, device -> {
+            showDeviceActions(device);
         });
 
         rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
@@ -129,6 +132,40 @@ public class DashboardFragment extends Fragment {
             }
         });
 
+    }
+
+    private void showDeviceActions(Device device) {
+        BottomSheetDialog bottomSheet = new BottomSheetDialog(requireContext());
+        View view = getLayoutInflater().inflate(R.layout.layout_device_actions, null);
+
+        android.widget.EditText etName = view.findViewById(R.id.etDeviceName);
+        etName.setText(device.getName());
+
+        view.findViewById(R.id.btnSaveName).setOnClickListener(v -> {
+            String newName = etName.getText().toString().trim();
+            if (!newName.isEmpty()) {
+                device.setName(newName);
+                viewModel.saveDevice(device);
+                bottomSheet.dismiss();
+            } else {
+                Toast.makeText(getContext(), "Nazwa nie może być pusta!", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        view.findViewById(R.id.btnDeleteDevice).setOnClickListener(v -> {
+            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                    .setTitle("Usuń urządzenie")
+                    .setMessage("Czy na pewno chcesz usunąć " + device.getName() + "?")
+                    .setPositiveButton("Usuń", (dialog, which) -> {
+                        viewModel.deleteDevice(device.getId());
+                        bottomSheet.dismiss();
+                    })
+                    .setNegativeButton("Anuluj", null)
+                    .show();
+        });
+
+        bottomSheet.setContentView(view);
+        bottomSheet.show();
     }
 
     @Override
