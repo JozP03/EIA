@@ -31,6 +31,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final Gson gson = new Gson();
     private final SharedPreferences prefs;
 
+
     public DashboardViewModel(@NonNull Application application) {
         super(application);
         prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
@@ -105,39 +106,49 @@ public class DashboardViewModel extends AndroidViewModel {
         }
 
         try {
-            String valueStr = "";
-            String unit = "°C"; // Domyślna jednostka
             String trimmedPayload = payload.trim();
 
-            if (trimmedPayload.contains(";")) {
-                String[] parts = trimmedPayload.split(";");
-                boolean foundT = false;
-                for (String part : parts) {
-                    String p = part.trim();
-                    if (p.startsWith("T:")) {
-                        valueStr = p.substring(2);
-                        foundT = true;
-                    } else if (p.startsWith("U:")) {
-                        unit = p.substring(2);
+            // Obsługa stanu błędu
+            if ("ERR:NoSensors".equals(trimmedPayload)) {
+                boolean found = false;
+                for (Sensor s : sensors) {
+                    if (s.getId().equals(sensorId)) {
+                        s.setHasError(true);
+                        found = true;
+                        break;
                     }
                 }
-                // Fallback dla starego formatu: wartość;jednostka
-                if (!foundT && parts.length >= 1) {
-                    valueStr = parts[0].trim();
-                    if (parts.length >= 2 && !parts[1].trim().startsWith("U:")) {
-                        unit = parts[1].trim();
-                    }
+                if (!found) {
+                    Sensor s = new Sensor(sensorId, "UNKNOWN", sensorId, "---", 0, true);
+                    sensors.add(s);
                 }
-            } else {
-                // Brak średnika - sprawdź T: lub samą liczbę
-                if (trimmedPayload.startsWith("T:")) {
-                    valueStr = trimmedPayload.substring(2);
+                return;
+            }
+
+            String valueStr = "";
+            String unit = "";
+            boolean firstValueFound = false;
+
+            // tylko pierwszy prefix i pierwszą wartość
+            if (trimmedPayload.contains(":")) {
+                String[] kv = trimmedPayload.split(":", 2);
+                String prefix = kv[0].trim();
+                String rest = kv[1].trim();
+
+                if (rest.contains(";")) {
+                    valueStr = rest.split(";")[0].trim();
                 } else {
-                    valueStr = trimmedPayload;
+                    valueStr = rest;
+                }
+
+                unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
+                if (!valueStr.isEmpty()) {
+                    firstValueFound = true;
                 }
             }
 
-            if (valueStr.isEmpty()) return;
+            if (!firstValueFound) return;
+
             float value = Float.parseFloat(valueStr);
             boolean found = false;
 
@@ -145,21 +156,20 @@ public class DashboardViewModel extends AndroidViewModel {
                 if (s.getId().equals(sensorId)) {
                     s.setValue(value);
                     s.setUnit(unit);
+                    s.setHasError(false);
                     found = true;
                     break;
                 }
             }
 
             if (!found) {
-                // Nowy sensor z id, typem (UNKNOWN), nazwą (sensorId), jednostką i wartością
-                sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, unit, value));
+                sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, unit, value, false));
             }
         } catch (NumberFormatException e) {
             Log.e(TAG, "Błąd formatu danych sensora: " + payload);
         }
     }
-
-    public void loadDevices() {
+  public void loadDevices() {
         String json = prefs.getString(KEY_DEVICES, null);
         if (json != null) {
             Type type = new TypeToken<ArrayList<Device>>() {}.getType();
