@@ -108,7 +108,9 @@ public class DashboardFragment extends Fragment {
 
         com.eia.app.adapters.DeviceAdapter adapter = new com.eia.app.adapters.DeviceAdapter(device -> {
             // przejście do szczegółów urządzenia
-            Log.d("DashboardFragment", "Kliknięcie na urządzenie: " + device.getName());
+            Bundle args = new Bundle();
+            args.putString("deviceId", device.getId());
+            navController.navigate(R.id.action_dashboardFragment_to_deviceDetailsFragment, args);
         }, device -> {
             showDeviceActions(device);
         });
