@@ -110,63 +110,87 @@ public class DashboardViewModel extends AndroidViewModel {
 
             // Obsługa stanu błędu
             if ("ERR:NoSensors".equals(trimmedPayload)) {
-                boolean found = false;
-                for (Sensor s : sensors) {
-                    if (s.getId().equals(sensorId)) {
-                        s.setHasError(true);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    Sensor s = new Sensor(sensorId, "UNKNOWN", sensorId, "---", 0, true);
-                    sensors.add(s);
-                }
+                updateAllSensorsError(sensors, sensorId, true);
                 return;
             }
 
-            String valueStr = "";
-            String unit = "";
-            boolean firstValueFound = false;
+            // Rozdzielamy po średniku (np. T:24.3;H:70)
+            String[] parts = trimmedPayload.split(";");
+            boolean firstFound = false;
 
-            // tylko pierwszy prefix i pierwszą wartość
-            if (trimmedPayload.contains(":")) {
-                String[] kv = trimmedPayload.split(":", 2);
-                String prefix = kv[0].trim();
-                String rest = kv[1].trim();
+            for (String part : parts) {
+                String p = part.trim();
+                if (p.contains(":")) {
+                    String[] kv = p.split(":", 2);
+                    String prefix = kv[0].trim();
+                    String valStr = kv[1].trim();
+                    
+                    if (valStr.isEmpty()) continue;
 
-                if (rest.contains(";")) {
-                    valueStr = rest.split(";")[0].trim();
-                } else {
-                    valueStr = rest;
-                }
+                    String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
+                    float value = Float.parseFloat(valStr);
+                    
+                    // Unikalne ID dla każdego typu danych z tego czujnika
+                    String logicSensorId = sensorId + "_" + prefix;
+                    boolean isPrimary = !firstFound; // Pierwszy w stringu jest główny
 
-                unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
-                if (!valueStr.isEmpty()) {
-                    firstValueFound = true;
-                }
-            }
-
-            if (!firstValueFound) return;
-
-            float value = Float.parseFloat(valueStr);
-            boolean found = false;
-
-            for (Sensor s : sensors) {
-                if (s.getId().equals(sensorId)) {
-                    s.setValue(value);
-                    s.setUnit(unit);
-                    s.setHasError(false);
-                    found = true;
-                    break;
+                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary);
+                    firstFound = true;
                 }
             }
-
-            if (!found) {
-                sensors.add(new Sensor(sensorId, "UNKNOWN", sensorId, unit, value, false));
-            }
+            
         } catch (NumberFormatException e) {
             Log.e(TAG, "Błąd formatu danych sensora: " + payload);
+        }
+    }
+
+    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary) {
+        boolean found = false;
+        for (Sensor s : sensors) {
+            if (s.getId().equals(id)) {
+                s.setValue(value);
+                s.setUnit(unit);
+                s.setPrefix(prefix);
+                s.setPrimary(isPrimary);
+                s.setHasError(false);
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            String name;
+            switch (prefix) {
+                case "T":
+                    name = "Temperatura";
+                    break;
+                case "H":
+                    name = "Wilgotność";
+                    break;
+                case "P":
+                    name = "Ciśnienie";
+                    break;
+                case "L":
+                    name = "Jasność";
+                    break;
+                default:
+                    name = id; // Fallback do ID
+                    break;
+            }
+            sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary));
+        }
+    }
+
+    private void updateAllSensorsError(List<Sensor> sensors, String baseSensorId, boolean hasError) {
+        boolean anyFound = false;
+        for (Sensor s : sensors) {
+            if (s.getId().startsWith(baseSensorId)) {
+                s.setHasError(hasError);
+                anyFound = true;
+            }
+        }
+        if (!anyFound && hasError) {
+            sensors.add(new Sensor(baseSensorId, "Brak sensora", "---", 0, true, "", true));
         }
     }
   public void loadDevices() {

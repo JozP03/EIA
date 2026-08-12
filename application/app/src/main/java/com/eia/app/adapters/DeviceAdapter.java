@@ -63,6 +63,9 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
         // Tu pętla po czujnikach
         if (device.getSensorList() != null) {
             for (Sensor sensor : device.getSensorList()) {
+                // Na dashboardzie jedynie glowny
+                if (!sensor.isPrimary()) continue;
+
                 View sensorView = LayoutInflater.from(holder.itemView.getContext())
                         .inflate(R.layout.item_sensor_row, holder.sensorsContainer, false);
 
