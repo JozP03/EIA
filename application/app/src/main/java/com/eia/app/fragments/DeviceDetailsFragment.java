@@ -17,9 +17,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.eia.app.R;
 import com.eia.app.adapters.SensorCardAdapter;
 import com.eia.app.models.Device;
+import com.eia.app.models.Sensor;
 import com.eia.app.viewModels.DashboardViewModel;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class DeviceDetailsFragment extends Fragment {
 
@@ -49,6 +51,7 @@ public class DeviceDetailsFragment extends Fragment {
 
         tvDeviceName = view.findViewById(R.id.tvDeviceName);
         RecyclerView rvSensors = view.findViewById(R.id.rvSensorCards);
+        TextView tvEmpty = view.findViewById(R.id.tvEmptySensors);
         
         view.findViewById(R.id.btnBack).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
@@ -61,8 +64,15 @@ public class DeviceDetailsFragment extends Fragment {
                 for (Device device : devices) {
                     if (device.getId().equals(deviceId)) {
                         tvDeviceName.setText(device.getName());
-                        if (device.getSensorList() != null) {
-                            adapter.submitList(new ArrayList<>(device.getSensorList()));
+                        List<Sensor> sensorList = device.getSensorList();
+                        
+                        if (sensorList == null || sensorList.isEmpty()) {
+                            tvEmpty.setVisibility(View.VISIBLE);
+                            rvSensors.setVisibility(View.GONE);
+                        } else {
+                            tvEmpty.setVisibility(View.GONE);
+                            rvSensors.setVisibility(View.VISIBLE);
+                            adapter.submitList(new ArrayList<>(sensorList));
                         }
                         break;
                     }

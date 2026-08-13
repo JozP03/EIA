@@ -59,6 +59,14 @@ public class DashboardViewModel extends AndroidViewModel {
                     if (event.getType() == MqttEvent.Type.STATUS) {
                         boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
                         updatedDevice.setOnline(isOnline);
+                        
+                        // Jeśli bramka jest offline
+                        if (!isOnline) {
+                            for (Sensor s : updatedDevice.getSensorList()) {
+                                s.setHasError(true);
+                            }
+                        }
+                        
                         newList.add(updatedDevice);
                         anyUpdated = true;
                     } else if (event.getType() == MqttEvent.Type.DATA) {
@@ -108,8 +116,8 @@ public class DashboardViewModel extends AndroidViewModel {
         try {
             String trimmedPayload = payload.trim();
 
-            // Obsługa stanu błędu
-            if ("ERR:NoSensors".equals(trimmedPayload)) {
+            // Obsługa stanu błędu lub offline
+            if ("ERR:NoSensors".equalsIgnoreCase(trimmedPayload) || "offline".equalsIgnoreCase(trimmedPayload)) {
                 updateAllSensorsError(sensors, sensorId, true);
                 return;
             }

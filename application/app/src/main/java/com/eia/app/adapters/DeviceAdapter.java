@@ -60,38 +60,45 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
         }
 
         holder.sensorsContainer.removeAllViews();
+        boolean hasSensors = false;
         // Tu pętla po czujnikach
         if (device.getSensorList() != null) {
             for (Sensor sensor : device.getSensorList()) {
                 // Na dashboardzie jedynie glowny
                 if (!sensor.isPrimary()) continue;
 
+                hasSensors = true;
                 View sensorView = LayoutInflater.from(holder.itemView.getContext())
                         .inflate(R.layout.item_sensor_row, holder.sensorsContainer, false);
 
                 android.widget.TextView tvName = sensorView.findViewById(R.id.tvSensorName);
                 android.widget.TextView tvValue = sensorView.findViewById(R.id.tvSensorValue);
-                android.widget.ImageView ivIcon = sensorView.findViewById(R.id.ivSensorIcon);
+                View ivIcon = sensorView.findViewById(R.id.ivSensorIcon);
 
                 if (sensor.isHasError()) {
                     tvName.setText("Brak sensora");
                     tvValue.setText("--");
-                    ivIcon.setImageResource(android.R.drawable.stat_notify_error);
-                    ivIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
-                            holder.itemView.getContext().getColor(R.color.accent_red)));
+                    ivIcon.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_red));
                 } else {
                     tvName.setText(sensor.getName());
                     // Format (np. "22.5 °C")
                     String formattedValue = String.format(java.util.Locale.getDefault(),
                             "%.1f %s", sensor.getValue(), sensor.getUnit());
                     tvValue.setText(formattedValue);
-                    ivIcon.setImageResource(android.R.drawable.ic_menu_compass);
-                    ivIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
-                            holder.itemView.getContext().getColor(R.color.accent_blue)));
+                    ivIcon.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_green));
                 }
 
                 holder.sensorsContainer.addView(sensorView);
             }
+        }
+
+        if (!hasSensors) {
+            TextView tvNoSensors = new TextView(holder.itemView.getContext());
+            tvNoSensors.setText("Brak podłączonych sensorów");
+            tvNoSensors.setTextSize(12);
+            tvNoSensors.setTextColor(holder.itemView.getContext().getColor(R.color.text_muted));
+            tvNoSensors.setPadding(0, 8, 0, 0);
+            holder.sensorsContainer.addView(tvNoSensors);
         }
 
         holder.itemView.setOnClickListener(v -> clickListener.onDeviceClick(device));

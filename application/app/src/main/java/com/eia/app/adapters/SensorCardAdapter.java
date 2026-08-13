@@ -38,13 +38,11 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
 
         if (sensor.isHasError()) {
             holder.tvValue.setText("--");
-            holder.ivIcon.setImageResource(android.R.drawable.stat_notify_error);
-            holder.ivIcon.setImageTintList(ColorStateList.valueOf(holder.itemView.getContext().getColor(R.color.accent_red)));
+            holder.ivIcon.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_red));
         } else {
             String formattedValue = String.format(Locale.getDefault(), "%.1f %s", sensor.getValue(), sensor.getUnit());
             holder.tvValue.setText(formattedValue);
-            holder.ivIcon.setImageResource(android.R.drawable.ic_menu_compass);
-            holder.ivIcon.setImageTintList(ColorStateList.valueOf(holder.itemView.getContext().getColor(R.color.accent_blue)));
+            holder.ivIcon.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_green));
         }
         
         // logika wykresu
@@ -64,7 +62,7 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvValue;
-        ImageView ivIcon;
+        View ivIcon;
 
         ViewHolder(View itemView) {
             super(itemView);
