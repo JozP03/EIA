@@ -51,6 +51,12 @@ dependencies {
     implementation(libs.hivemq.mqtt.client)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+
+    // Room
+    implementation(libs.room.runtime)
+    annotationProcessor(libs.room.compiler)
+    implementation(libs.room.ktx)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
