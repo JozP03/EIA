@@ -30,13 +30,16 @@ public class DashboardViewModel extends AndroidViewModel {
     private final MutableLiveData<List<Device>> devices = new MutableLiveData<>(new ArrayList<>());
     private final Gson gson = new Gson();
     private final SharedPreferences prefs;
+    private final com.eia.app.db.AppDatabase db;
 
 
     public DashboardViewModel(@NonNull Application application) {
         super(application);
         prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        db = com.eia.app.db.AppDatabase.getDatabase(application);
         loadDevices();
         observeMqttEvents();
+        cleanOldData();
     }
 
     private void observeMqttEvents() {
@@ -187,6 +190,24 @@ public class DashboardViewModel extends AndroidViewModel {
             }
             sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary));
         }
+
+        // zapisanie do bazy danych
+        com.eia.app.db.SensorReading reading = new com.eia.app.db.SensorReading(id, value, System.currentTimeMillis());
+        com.eia.app.db.AppDatabase.databaseWriteExecutor.execute(() -> {
+            db.readingDao().insert(reading);
+        });
+    }
+
+    private void cleanOldData() {
+        // usuwanie danych starszych niż 24 godziny
+        long threshold = System.currentTimeMillis() - (24 * 60 * 60 * 1000);
+        com.eia.app.db.AppDatabase.databaseWriteExecutor.execute(() -> {
+            db.readingDao().deleteOldReadings(threshold);
+        });
+    }
+
+    public LiveData<List<com.eia.app.db.SensorReading>> getReadingsForSensor(String sensorId) {
+        return db.readingDao().getReadingsForSensor(sensorId);
     }
 
     private void updateAllSensorsError(List<Sensor> sensors, String baseSensorId, boolean hasError) {
