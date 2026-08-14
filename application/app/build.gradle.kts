@@ -57,6 +57,9 @@ dependencies {
     annotationProcessor(libs.room.compiler)
     implementation(libs.room.ktx)
 
+    // charts
+    implementation(libs.mp.android.chart)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)

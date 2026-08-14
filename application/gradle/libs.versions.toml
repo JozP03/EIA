@@ -14,6 +14,7 @@ usbSerial = "3.10.0"
 drawerlayout = "1.2.0"
 preference = "1.2.0"
 room = "2.6.1"
+mpAndroidChart = "v3.1.0"
 
 [libraries]
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
@@ -34,6 +35,7 @@ preference = { group = "androidx.preference", name = "preference", version.ref =
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
+mp-android-chart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpAndroidChart" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
