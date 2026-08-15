@@ -55,7 +55,7 @@ public class DeviceDetailsFragment extends Fragment {
         
         view.findViewById(R.id.btnBack).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
-        adapter = new SensorCardAdapter();
+        adapter = new SensorCardAdapter(viewModel, getViewLifecycleOwner());
         rvSensors.setLayoutManager(new LinearLayoutManager(getContext()));
         rvSensors.setAdapter(adapter);
 
