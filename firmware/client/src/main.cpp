@@ -1,12 +1,12 @@
-#include <Arduino.h>
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEAdvertising.h>
-#include <WiFi.h>
-#include <Wire.h>
-#include <Adafruit_Sensor.h>
 #include <Adafruit_AHTX0.h>
 #include <Adafruit_BMP280.h>
+#include <Adafruit_Sensor.h>
+#include <Arduino.h>
+#include <BLEAdvertising.h>
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <WiFi.h>
+#include <Wire.h>
 
 #define LED_PIN 8
 #define I2C_SDA 2
@@ -15,7 +15,7 @@
 Adafruit_BMP280 bmp;
 Adafruit_AHTX0 aht;
 
-//flagi czunika
+// flagi czunika
 bool hasBMP = false;
 bool hasAHT = false;
 
@@ -30,19 +30,12 @@ struct SensorDevice {
   String name;
   bool isActive;
   int metricCount;
-  Metric metrics[2]; 
+  Metric metrics[2];
 };
 
 SensorDevice mySensors[2] = {
-  {
-    0x38, "AHT20", false, 2,
-    { {"T", 0.0, 1}, {"H", 0.0, 0} }
-  },
-  {
-    0x76, "BMP280", false, 1,
-    { {"P", 0.0, 0}}
-  }
-};
+    {0x38, "AHT20", false, 2, {{"T", 0.0, 1}, {"H", 0.0, 0}}},
+    {0x76, "BMP280", false, 1, {{"P", 0.0, 0}}}};
 
 const int numSensors = sizeof(mySensors) / sizeof(mySensors[0]);
 
@@ -50,9 +43,9 @@ BLEAdvertising *pAdvertising;
 float mockTemperature = 22.0;
 
 String uniqueSensorName = "";
-unsigned long lastSendTime = 0; 
-const unsigned long sendInterval = 30000; // 30 sekund
-const char* Defunit = "°C";
+unsigned long lastSendTime = 0;
+const unsigned long sendInterval = 5 * 60000; // 5 minut w milisekundach
+const char *Defunit = "°C";
 
 bool checkI2C(uint8_t address) {
   Wire.beginTransmission(address);
@@ -74,11 +67,10 @@ void setup() {
   for (int i = 0; i < numSensors; i++) {
     if (checkI2C(mySensors[i].address)) {
       Serial.println("Wykryto: " + mySensors[i].name);
-      
+
       if (mySensors[i].address == 0x38) {
         mySensors[i].isActive = aht.begin(&Wire);
-      } 
-      else if (mySensors[i].address == 0x76) {
+      } else if (mySensors[i].address == 0x76) {
         mySensors[i].isActive = bmp.begin(0x76);
       }
     } else {
@@ -88,8 +80,8 @@ void setup() {
 
   BLEDevice::init("");
   pAdvertising = BLEDevice::getAdvertising();
-  
-  pAdvertising->setScanResponse(true); 
+
+  pAdvertising->setScanResponse(true);
   pAdvertising->start();
 }
 
@@ -106,8 +98,7 @@ void loop() {
           aht.getEvent(&humidity, &temp);
           mySensors[i].metrics[0].value = temp.temperature;
           mySensors[i].metrics[1].value = humidity.relative_humidity;
-        } 
-        else if (mySensors[i].address == 0x76) { // BMP
+        } else if (mySensors[i].address == 0x76) { // BMP
           mySensors[i].metrics[0].value = bmp.readPressure() / 100.0F;
         }
       }
@@ -115,11 +106,13 @@ void loop() {
 
     String payload = uniqueSensorName;
     bool anyData = false;
-    
+
     for (int i = 0; i < numSensors; i++) {
       if (mySensors[i].isActive) {
         for (int m = 0; m < mySensors[i].metricCount; m++) {
-          payload += ";" + mySensors[i].metrics[m].prefix + ":" + String(mySensors[i].metrics[m].value, mySensors[i].metrics[m].decimals);
+          payload += ";" + mySensors[i].metrics[m].prefix + ":" +
+                     String(mySensors[i].metrics[m].value,
+                            mySensors[i].metrics[m].decimals);
           anyData = true;
         }
       }
@@ -132,19 +125,20 @@ void loop() {
     pAdvertising->stop();
 
     BLEAdvertisementData advertisementData;
-    advertisementData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
-    advertisementData.setManufacturerData(payload.c_str()); 
-    
+    advertisementData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC |
+                               ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
+    advertisementData.setManufacturerData(payload.c_str());
+
     BLEAdvertisementData scanResponseData;
     scanResponseData.setName(uniqueSensorName.c_str());
 
     pAdvertising->setAdvertisementData(advertisementData);
     pAdvertising->setScanResponseData(scanResponseData);
-    
+
     pAdvertising->start();
-    
+
     Serial.println("Rozgłoszono: " + payload);
   }
 
-  delay(10); 
+  delay(10);
 }
