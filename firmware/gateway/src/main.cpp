@@ -61,6 +61,7 @@ struct SensorStatus {
     char id[16];
     unsigned long lastSeen;
     bool isOnline;
+    char lastPayload[32];
 };
 #define MAX_SENSORS 10
 SensorStatus sensorRegistry[MAX_SENSORS];
@@ -91,13 +92,10 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       std::string strManufacturerData = advertisedDevice.getManufacturerData();
       String data = String(strManufacturerData.c_str());
 
-      // Oczekujemy np. "ID:ESP_A1B2C3;T:22.5;U:60"
-      if (data.startsWith("ESP_")) {
+      if (data.startsWith("ID:")) {
         int semiColonIndex = data.indexOf(';');
         if (semiColonIndex != -1) {
-          String idStr = data.substring(0, semiColonIndex);
-          
-          // Wszystko po pierwszym sredniku
+          String idStr = data.substring(3, semiColonIndex);
           String restOfData = data.substring(semiColonIndex + 1);
 
           Message msg;
@@ -106,8 +104,24 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
           strncpy(msg.sensorId, idStr.c_str(), sizeof(msg.sensorId) - 1);
           strncpy(msg.payloadData, restOfData.c_str(), sizeof(msg.payloadData) - 1);
 
+          // --- filtrowanie duplikatów ---
+          bool shouldSend = true;
+          for (int i = 0; i < MAX_SENSORS; i++) {
+              if (strcmp(sensorRegistry[i].id, msg.sensorId) == 0) {
+                  if (strcmp(sensorRegistry[i].lastPayload, msg.payloadData) == 0) {
+                      shouldSend = false; 
+                  } else {
+                      strncpy(sensorRegistry[i].lastPayload, msg.payloadData, 31);
+                  }
+                  break;
+              }
+          }
+
           updateSensorStatus(msg.sensorId);
-          xQueueSend(valueQueue, &msg, 0);
+
+          if (shouldSend) {
+            xQueueSend(valueQueue, &msg, 0);
+          }
         }
       }
     }

@@ -60,6 +60,7 @@ void setId() {
 
 void setup() {
   Serial.begin(115200);
+  Serial.setTxTimeoutMs(0);
   setId();
 
   Wire.begin(I2C_SDA, I2C_SCL);
