@@ -145,7 +145,7 @@ public class DashboardViewModel extends AndroidViewModel {
                     String logicSensorId = sensorId + "_" + prefix;
                     boolean isPrimary = !firstFound; // Pierwszy w stringu jest główny
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary);
+                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId);
                     firstFound = true;
                 }
             }
@@ -155,7 +155,7 @@ public class DashboardViewModel extends AndroidViewModel {
         }
     }
 
-    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary) {
+    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId) {
         boolean found = false;
         for (Sensor s : sensors) {
             if (s.getId().equals(id)) {
@@ -163,6 +163,7 @@ public class DashboardViewModel extends AndroidViewModel {
                 s.setUnit(unit);
                 s.setPrefix(prefix);
                 s.setPrimary(isPrimary);
+                s.setPhysicalId(physicalId);
                 s.setHasError(false);
                 found = true;
                 break;
@@ -170,25 +171,17 @@ public class DashboardViewModel extends AndroidViewModel {
         }
 
         if (!found) {
-            String name;
-            switch (prefix) {
-                case "T":
-                    name = "Temperatura";
+            // Sprawdzamy czy mamy już jakąś nazwę dla tego fizycznego ID (boxy)
+            String existingName = null;
+            for(Sensor s : sensors) {
+                if(physicalId.equals(s.getPhysicalId())) {
+                    existingName = s.getName();
                     break;
-                case "H":
-                    name = "Wilgotność";
-                    break;
-                case "P":
-                    name = "Ciśnienie";
-                    break;
-                case "L":
-                    name = "Jasność";
-                    break;
-                default:
-                    name = id; // Fallback do ID
-                    break;
+                }
             }
-            sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary));
+
+            String name = (existingName != null) ? existingName : physicalId;
+            sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary, physicalId));
         }
 
         // zapisanie do bazy danych
@@ -213,13 +206,13 @@ public class DashboardViewModel extends AndroidViewModel {
     private void updateAllSensorsError(List<Sensor> sensors, String baseSensorId, boolean hasError) {
         boolean anyFound = false;
         for (Sensor s : sensors) {
-            if (s.getId().startsWith(baseSensorId)) {
+            if (s.getPhysicalId() != null && s.getPhysicalId().equals(baseSensorId)) {
                 s.setHasError(hasError);
                 anyFound = true;
             }
         }
         if (!anyFound && hasError) {
-            sensors.add(new Sensor(baseSensorId, "Brak sensora", "---", 0, true, "", true));
+            sensors.add(new Sensor(baseSensorId, baseSensorId, "---", 0, true, "", true, baseSensorId));
         }
     }
   public void loadDevices() {

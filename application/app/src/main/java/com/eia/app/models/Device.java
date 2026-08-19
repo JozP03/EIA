@@ -58,7 +58,7 @@ public class Device {
         List<Sensor> sensorsCopy = new ArrayList<>();
         if (this.sensorList != null) {
             for (Sensor s : this.sensorList) {
-                sensorsCopy.add(new Sensor(s.getId(), s.getName(), s.getUnit(), s.getValue(), s.isHasError(), s.getPrefix(), s.isPrimary()));
+                sensorsCopy.add(new Sensor(s.getId(), s.getName(), s.getUnit(), s.getValue(), s.isHasError(), s.getPrefix(), s.isPrimary(), s.getPhysicalId()));
             }
         }
         return new Device(this.id, this.name, this.isOnline, sensorsCopy);

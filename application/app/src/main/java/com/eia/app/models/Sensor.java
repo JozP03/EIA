@@ -8,12 +8,13 @@ public class Sensor {
     private boolean hasError;
     private String prefix;
     private boolean isPrimary;
+    private String physicalId;
 
     public Sensor(String id, String name, String unit, float value) {
-        this(id, name, unit, value, false, "", false);
+        this(id, name, unit, value, false, "", false, "");
     }
 
-    public Sensor(String id, String name, String unit, float value, boolean hasError, String prefix, boolean isPrimary) {
+    public Sensor(String id, String name, String unit, float value, boolean hasError, String prefix, boolean isPrimary, String physicalId) {
         this.id = id;
         this.name = name;
         this.unit = unit;
@@ -21,6 +22,7 @@ public class Sensor {
         this.hasError = hasError;
         this.prefix = prefix;
         this.isPrimary = isPrimary;
+        this.physicalId = physicalId;
     }
 
     public String getId() {
@@ -79,6 +81,14 @@ public class Sensor {
         isPrimary = primary;
     }
 
+    public String getPhysicalId() {
+        return physicalId;
+    }
+
+    public void setPhysicalId(String physicalId) {
+        this.physicalId = physicalId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -90,11 +100,12 @@ public class Sensor {
                 id.equals(sensor.id) &&
                 name.equals(sensor.name) &&
                 unit.equals(sensor.unit) &&
-                java.util.Objects.equals(prefix, sensor.prefix);
+                java.util.Objects.equals(prefix, sensor.prefix) &&
+                java.util.Objects.equals(physicalId, sensor.physicalId);
     }
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(id, name, unit, value, hasError, prefix, isPrimary);
+        return java.util.Objects.hash(id, name, unit, value, hasError, prefix, isPrimary, physicalId);
     }
 }

@@ -116,6 +116,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 void setup() {
   Serial.begin(115200);
+  Serial.setTxTimeoutMs(0);
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
 

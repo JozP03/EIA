@@ -76,7 +76,7 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
                 View ivIcon = sensorView.findViewById(R.id.ivSensorIcon);
 
                 if (sensor.isHasError()) {
-                    tvName.setText("Brak sensora");
+                    tvName.setText(sensor.getName() + " (Brak danych)");
                     tvValue.setText("--");
                     ivIcon.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_red));
                 } else {

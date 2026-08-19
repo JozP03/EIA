@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.eia.app.R;
-import com.eia.app.adapters.SensorCardAdapter;
+import com.eia.app.adapters.SensorGroupAdapter;
 import com.eia.app.models.Device;
 import com.eia.app.models.Sensor;
 import com.eia.app.viewModels.DashboardViewModel;
@@ -27,7 +27,7 @@ public class DeviceDetailsFragment extends Fragment {
 
     private String deviceId;
     private DashboardViewModel viewModel;
-    private SensorCardAdapter adapter;
+    private SensorGroupAdapter adapter;
     private TextView tvDeviceName;
 
     @Override
@@ -55,7 +55,7 @@ public class DeviceDetailsFragment extends Fragment {
         
         view.findViewById(R.id.btnBack).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
-        adapter = new SensorCardAdapter(viewModel, getViewLifecycleOwner());
+        adapter = new SensorGroupAdapter(viewModel, getViewLifecycleOwner());
         rvSensors.setLayoutManager(new LinearLayoutManager(getContext()));
         rvSensors.setAdapter(adapter);
 
@@ -72,7 +72,7 @@ public class DeviceDetailsFragment extends Fragment {
                         } else {
                             tvEmpty.setVisibility(View.GONE);
                             rvSensors.setVisibility(View.VISIBLE);
-                            adapter.submitList(new ArrayList<>(sensorList));
+                            adapter.updateData(sensorList);
                         }
                         break;
                     }
