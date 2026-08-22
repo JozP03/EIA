@@ -6,6 +6,8 @@
 #include <BLEScan.h>
 #include <BLEAdvertisedDevice.h>
 #include <Preferences.h>
+#include <time.h> 
+#include <LittleFS.h>
 
 Preferences preferences;
 
@@ -16,7 +18,6 @@ int mqtt_port = 8883;
 String mqtt_user = "";
 String mqtt_pass = "";
  
-// Certyfikat ISRG Root X1
 const char* root_ca = \
   "-----BEGIN CERTIFICATE-----\n" \
   "MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw" \
@@ -71,9 +72,19 @@ struct Message {
     char payloadData[32];
 };
 
+// --- PAMIĘĆ HISTORII ---
+struct HistoryRecord {
+    uint32_t timestamp;  
+    char sensorId[12];   
+    char payloadData[32];
+};
+#define MAX_HISTORY_RECORDS 250 
+HistoryRecord historyBuffer[MAX_HISTORY_RECORDS];
+int historyIndex = 0;
+bool historyWrapped = false; 
+bool triggerHistorySend = false;
+
 // --- PROTOTYPY ---
-void updateSensorStatus(const char* id);
-void checkOfflineSensors();
 void reconnectMqtt();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
 bool connectToSavedWifi();
@@ -84,6 +95,41 @@ void handleMqttConfig(String cmd);
 void bleTask(void *pvParameters);
 void mqttTask(void *pvParameters);
 void loadMqttConfig();
+void loadHistoryFromFlash();
+void saveHistoryToFlash();
+
+// --- LITTLEFS ---
+void loadHistoryFromFlash() {
+    if (!LittleFS.begin(true)) {
+        if (Serial) Serial.println("Błąd montowania LittleFS!");
+        return;
+    }
+    
+    File file = LittleFS.open("/history.bin", FILE_READ);
+    if (!file || file.size() == 0) {
+        if (Serial) Serial.println("Brak zapisanej historii. Zaczynam od zera.");
+        return;
+    }
+    
+    file.read((uint8_t*)historyBuffer, sizeof(historyBuffer));
+    file.read((uint8_t*)&historyIndex, sizeof(historyIndex));
+    file.read((uint8_t*)&historyWrapped, sizeof(historyWrapped));
+    file.close();
+    
+    if (Serial) Serial.println("Pomyślnie wczytano historię z Flash.");
+}
+
+void saveHistoryToFlash() {
+    File file = LittleFS.open("/history.bin", FILE_WRITE);
+    if (!file) {
+        if (Serial) Serial.println("Błąd zapisu historii do Flash!");
+        return;
+    }
+    file.write((uint8_t*)historyBuffer, sizeof(historyBuffer));
+    file.write((uint8_t*)&historyIndex, sizeof(historyIndex));
+    file.write((uint8_t*)&historyWrapped, sizeof(historyWrapped));
+    file.close();
+}
 
 // --- CALLBACK BLE ---
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
@@ -92,34 +138,46 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
       std::string strManufacturerData = advertisedDevice.getManufacturerData();
       String data = String(strManufacturerData.c_str());
 
-      if (data.startsWith("ID:")) {
+      if (data.startsWith("ESP_")) { 
         int semiColonIndex = data.indexOf(';');
         if (semiColonIndex != -1) {
-          String idStr = data.substring(3, semiColonIndex);
+          String idStr = data.substring(0, semiColonIndex);
           String restOfData = data.substring(semiColonIndex + 1);
 
           Message msg;
           memset(&msg, 0, sizeof(Message));
-          
-          strncpy(msg.sensorId, idStr.c_str(), sizeof(msg.sensorId) - 1);
-          strncpy(msg.payloadData, restOfData.c_str(), sizeof(msg.payloadData) - 1);
+          snprintf(msg.sensorId, sizeof(msg.sensorId), "%s", idStr.c_str());
+          snprintf(msg.payloadData, sizeof(msg.payloadData), "%s", restOfData.c_str());
 
-          // --- filtrowanie duplikatów ---
-          bool shouldSend = true;
+          bool isNewData = false;
+          bool found = false;
+
           for (int i = 0; i < MAX_SENSORS; i++) {
               if (strcmp(sensorRegistry[i].id, msg.sensorId) == 0) {
-                  if (strcmp(sensorRegistry[i].lastPayload, msg.payloadData) == 0) {
-                      shouldSend = false; 
-                  } else {
-                      strncpy(sensorRegistry[i].lastPayload, msg.payloadData, 31);
+                  found = true;
+                  sensorRegistry[i].lastSeen = millis(); 
+                  
+                  if (strcmp(sensorRegistry[i].lastPayload, msg.payloadData) != 0) {
+                      snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
+                      isNewData = true;
                   }
                   break;
               }
           }
 
-          updateSensorStatus(msg.sensorId);
+          if (!found) {
+              for (int i = 0; i < MAX_SENSORS; i++) {
+                  if (sensorRegistry[i].id[0] == '\0') {
+                      snprintf(sensorRegistry[i].id, sizeof(sensorRegistry[i].id), "%s", msg.sensorId);
+                      snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
+                      sensorRegistry[i].lastSeen = millis();
+                      isNewData = true;
+                      break;
+                  }
+              }
+          }
 
-          if (shouldSend) {
+          if (isNewData) {
             xQueueSend(valueQueue, &msg, 0);
           }
         }
@@ -131,13 +189,18 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 void setup() {
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);
+  
+  loadHistoryFromFlash();
+  
   WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
   WiFi.disconnect();
 
-  valueQueue = xQueueCreate(10, sizeof(Message));
+  valueQueue = xQueueCreate(15, sizeof(Message));
   espClient.setCACert(root_ca);
   mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
   mqttClient.setCallback(mqttCallback);
+  mqttClient.setKeepAlive(60);
 
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan();
@@ -154,12 +217,13 @@ void setup() {
   if (mqtt_server.length() > 0) {
       mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
   }
-  mqttClient.setCallback(mqttCallback);
   
-  connectToSavedWifi();
+  if (connectToSavedWifi()) {
+      configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "pool.ntp.org", "time.nist.gov");
+  }
 
   xTaskCreate(bleTask, "BLE_TASK", 6000, NULL, 1, NULL);
-  xTaskCreate(mqttTask, "MQTT_TASK", 8000, NULL, 1, NULL);
+  xTaskCreate(mqttTask, "MQTT_TASK", 10240, NULL, 2, NULL);
 }
 
 void loop() {
@@ -169,11 +233,33 @@ void loop() {
     if (input.equalsIgnoreCase("SCAN")) executeWifiScan();
     else if (input.startsWith("CONN:")) handleConnectionRequest(input);
     else if (input.startsWith("CONN_STATIC:")) handleStaticConnectionRequest(input);
+    else if (input.equalsIgnoreCase("CLEAR_HISTORY")) {
+        memset(historyBuffer, 0, sizeof(historyBuffer));
+        historyIndex = 0;
+        historyWrapped = false;
+        LittleFS.remove("/history.bin");
+        if (Serial) Serial.println("STATUS:HISTORY_CLEARED");
+    }
     else if (input.equalsIgnoreCase("RESET")) {
-        preferences.begin("wifi", false); preferences.clear(); preferences.end(); ESP.restart();
+        preferences.begin("wifi", false); preferences.clear(); preferences.end(); 
+        LittleFS.remove("/history.bin");
+        ESP.restart();
     }
     else if (input.startsWith("MQTT:")) handleMqttConfig(input);
   }
+
+  static unsigned long offlineTime = 0;
+  if (WiFi.status() != WL_CONNECTED) {
+    if (offlineTime == 0) offlineTime = millis();
+    
+    if (millis() - offlineTime > 180000) {
+        if (Serial) Serial.println("Brak Wi-Fi przez 3 min. Twardy restart...");
+        ESP.restart(); 
+    }
+  } else {
+    offlineTime = 0;
+  }
+  
   delay(100);
 }
 
@@ -189,7 +275,6 @@ void bleTask(void *pvParameters) {
 void mqttTask(void *pvParameters) {
     Message msg;
     static unsigned long lastReconnectAttempt = 0;
-    static unsigned long lastCheckTime = 0;
 
     while (true) {
         if (WiFi.status() == WL_CONNECTED && mqtt_server.length() > 0) {
@@ -200,15 +285,75 @@ void mqttTask(void *pvParameters) {
                 }
             } else {
                 mqttClient.loop();
-                if (millis() - lastCheckTime > 60000) {
-                    checkOfflineSensors();
-                    lastCheckTime = millis();
+                
+                unsigned long now_ms = millis();
+                for (int i = 0; i < MAX_SENSORS; i++) {
+                    if (sensorRegistry[i].id[0] != '\0') {
+                        bool isRecentlySeen = (now_ms - sensorRegistry[i].lastSeen < 360000); 
+                        
+                        if (isRecentlySeen && !sensorRegistry[i].isOnline) {
+                            sensorRegistry[i].isOnline = true;
+                            char topic[64];
+                            snprintf(topic, sizeof(topic), "%s/%s/status", gateId.c_str(), sensorRegistry[i].id);
+                            mqttClient.publish(topic, "online", true);
+                        } else if (!isRecentlySeen && sensorRegistry[i].isOnline) {
+                            sensorRegistry[i].isOnline = false;
+                            char topic[64];
+                            snprintf(topic, sizeof(topic), "%s/%s/status", gateId.c_str(), sensorRegistry[i].id);
+                            mqttClient.publish(topic, "offline", true);
+                        }
+                    }
                 }
+
+                if (triggerHistorySend) {
+                    triggerHistorySend = false;
+                    int count = historyWrapped ? MAX_HISTORY_RECORDS : historyIndex;
+                    int startIdx = historyWrapped ? historyIndex : 0;
+                    
+                    if (Serial) Serial.println("Wysyłam historię...");
+                    
+                    for (int i = 0; i < count; i++) {
+                        int idx = (startIdx + i) % MAX_HISTORY_RECORDS;
+                        char histTopic[64];
+                        snprintf(histTopic, sizeof(histTopic), "%s/history", gateId.c_str());
+                        
+                        char histPayload[128];
+                        snprintf(histPayload, sizeof(histPayload), "%lu;%s;%s", historyBuffer[idx].timestamp, historyBuffer[idx].sensorId, historyBuffer[idx].payloadData);
+                        mqttClient.publish(histTopic, histPayload);
+                        vTaskDelay(pdMS_TO_TICKS(10)); 
+                    }
+                    
+                    char eofTopic[64];
+                    snprintf(eofTopic, sizeof(eofTopic), "%s/history", gateId.c_str());
+                    mqttClient.publish(eofTopic, "EOF"); 
+                    if (Serial) Serial.println("Zakończono wysyłanie historii.");
+                }
+
                 while (xQueueReceive(valueQueue, &msg, 0) == pdTRUE) {
+                    
+                    time_t nowTime;
+                    time(&nowTime);
+                    
+                    if (nowTime > 1600000000) {
+                        historyBuffer[historyIndex].timestamp = (uint32_t)nowTime;
+                        snprintf(historyBuffer[historyIndex].sensorId, sizeof(historyBuffer[historyIndex].sensorId), "%s", msg.sensorId);
+                        snprintf(historyBuffer[historyIndex].payloadData, sizeof(historyBuffer[historyIndex].payloadData), "%s", msg.payloadData);
+                        
+                        historyIndex++;
+                        if (historyIndex >= MAX_HISTORY_RECORDS) {
+                            historyIndex = 0;
+                            historyWrapped = true;
+                        }
+                        saveHistoryToFlash(); 
+                    }
+
                     char topic[64];
                     snprintf(topic, sizeof(topic), "%s/%s", gateId.c_str(), msg.sensorId);
                     mqttClient.publish(topic, msg.payloadData);
-                    Serial.printf("MQTT_PUB: [%s] -> %s\n", topic, msg.payloadData);
+                    
+                    if (Serial) { 
+                        Serial.printf("MQTT_PUB: [%s] -> %s\n", topic, msg.payloadData);
+                    }
                 }
             }
         }
@@ -216,62 +361,33 @@ void mqttTask(void *pvParameters) {
     }
 }
 
-// --- FUNKCJE LOGIKI ---
-void updateSensorStatus(const char* id) {
-    bool found = false;
-    for (int i = 0; i < MAX_SENSORS; i++) {
-        if (strcmp(sensorRegistry[i].id, id) == 0) {
-            if (!sensorRegistry[i].isOnline) {
-                sensorRegistry[i].isOnline = true;
-                char topic[64];
-                snprintf(topic, sizeof(topic), "%s/%s/status", gateId.c_str(), id);
-                mqttClient.publish(topic, "online", true);
-            }
-            sensorRegistry[i].lastSeen = millis();
-            found = true;
-            break;
-        }
-    }
-    if (!found) {
-        for (int i = 0; i < MAX_SENSORS; i++) {
-            if (sensorRegistry[i].id[0] == '\0') {
-                strncpy(sensorRegistry[i].id, id, 15);
-                sensorRegistry[i].lastSeen = millis();
-                sensorRegistry[i].isOnline = true;
-                break;
-            }
-        }
-    }
-}
-
-void checkOfflineSensors() {
-    unsigned long now = millis();
-    const unsigned long TIMEOUT = 60000; // 1 minuta
-
-    for (int i = 0; i < MAX_SENSORS; i++) {
-        if (sensorRegistry[i].id[0] != '\0' && sensorRegistry[i].isOnline) {
-            if (now - sensorRegistry[i].lastSeen > TIMEOUT) {
-                sensorRegistry[i].isOnline = false;
-                char topic[64];
-                snprintf(topic, sizeof(topic), "%s/%s/status", gateId.c_str(), sensorRegistry[i].id);
-                mqttClient.publish(topic, "offline", true);
-            }
-        }
-    }
-}
-
 void reconnectMqtt() {
     String statusTopicStr = gateId + "/status";
     if (mqttClient.connect(gateId.c_str(), mqtt_user.c_str(), mqtt_pass.c_str(), statusTopicStr.c_str(), 1, true, "offline")) {
         mqttClient.publish(statusTopicStr.c_str(), "online", true);
+        
+        String cmdTopic = gateId + "/command";
+        mqttClient.subscribe(cmdTopic.c_str());
     }
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-  // Obsługa wiadomości przychodzących z MQTT
+    String topicStr = String(topic);
+    String payloadStr = "";
+    for (int i = 0; i < length; i++) {
+        payloadStr += (char)payload[i];
+    }
+
+    if (Serial) {
+        Serial.printf("MQTT_REC: [%s] -> %s\n", topicStr.c_str(), payloadStr.c_str());
+    }
+
+    if (topicStr.endsWith("/command") && payloadStr.equalsIgnoreCase("GET_HISTORY")) {
+        triggerHistorySend = true;
+    }
 }
 
-// --- FUNKCJE WIFI
+// --- WIFI ---
 bool connectToSavedWifi() {
   preferences.begin("wifi", false);
   int mode = preferences.getInt("mode", -1);
@@ -301,24 +417,22 @@ void handleConnectionRequest(String cmd) {
   preferences.begin("wifi", false);
   int separatorIndex = cmd.indexOf(';');
   if (separatorIndex == -1) {
-    Serial.println("STATUS:ERROR_FORMAT");
+    if (Serial) Serial.println("STATUS:ERROR_FORMAT");
     preferences.end();
     return;
   }
-
   String ssid = cmd.substring(5, separatorIndex);
   String password = cmd.substring(separatorIndex + 1);
   WiFi.begin(ssid.c_str(), password.c_str());
-
   unsigned long startAttemptTime = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS) {
     delay(500);
   }
-
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("STATUS:OK;ID:");
-    Serial.println(gateId);
-    
+    if (Serial) {
+        Serial.print("STATUS:OK;ID:");
+        Serial.println(gateId);
+    }
     delay(10);
     preferences.putInt("mode", 1);
     preferences.putString("last_ssid", ssid);
@@ -326,7 +440,7 @@ void handleConnectionRequest(String cmd) {
     preferences.end();
     delay(1000);
   } else {
-    Serial.println("STATUS:ERROR_TIMEOUT");
+    if (Serial) Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
   }
 }
@@ -349,35 +463,32 @@ void handleStaticConnectionRequest(String cmd) {
   }
 
   if (partCount < 5) {
-    Serial.println("STATUS:ERROR_FORMAT");
+    if (Serial) Serial.println("STATUS:ERROR_FORMAT");
     return;
   }
-
   String ssid = parts[0];
   String password = parts[1];
   IPAddress local_IP, gateway, subnet;
   
   if (!local_IP.fromString(parts[2]) || !gateway.fromString(parts[3]) || !subnet.fromString(parts[4])) {
-    Serial.println("STATUS:ERROR_IP_PARSING");
+    if (Serial) Serial.println("STATUS:ERROR_IP_PARSING");
     return;
   }
-
   IPAddress dns(8, 8, 8, 8);
   if (!WiFi.config(local_IP, gateway, subnet, dns)) {
-    Serial.println("STATUS:ERROR_CONFIG_FAILED");
+    if (Serial) Serial.println("STATUS:ERROR_CONFIG_FAILED");
     return;
   }
-
   WiFi.begin(ssid.c_str(), password.c_str());
   unsigned long startAttemptTime = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < WIFI_TIMEOUT_MS) {
     delay(500);
   }
-
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("STATUS:OK;ID:");
-    Serial.println(gateId);
-    
+    if (Serial) {
+        Serial.print("STATUS:OK;ID:");
+        Serial.println(gateId);
+    }
     delay(10);
     preferences.putInt("mode", 0);
     preferences.putString("last_ssid", ssid);
@@ -388,38 +499,29 @@ void handleStaticConnectionRequest(String cmd) {
     preferences.end();
     delay(1000);
   } else {
-    Serial.println("STATUS:ERROR_TIMEOUT");
+    if (Serial) Serial.println("STATUS:ERROR_TIMEOUT");
     WiFi.disconnect();
   }
 }
 
 void handleMqttConfig(String cmd) {
-  // Oczekiwany formata: "MQTT:server;port;user;pass"
   String data = cmd.substring(5);
-  
   int s1 = data.indexOf(';');
   int s2 = data.indexOf(';', s1 + 1);
   int s3 = data.indexOf(';', s2 + 1);
-
   mqtt_server = data.substring(0, s1);
   mqtt_port = data.substring(s1 + 1, s2).toInt();
   mqtt_user = data.substring(s2 + 1, s3);
   mqtt_pass = data.substring(s3 + 1);
-
   preferences.begin("mqtt", false);
-
   preferences.putString("server", mqtt_server);
   preferences.putInt("port", mqtt_port);
   preferences.putString("user", mqtt_user);
   preferences.putString("pass", mqtt_pass);
-
   preferences.end();
-
   mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
-
   mqttClient.disconnect();
-  
-  Serial.println("STATUS:MQTT_CONFIG_SAVED");  
+  if (Serial) Serial.println("STATUS:MQTT_CONFIG_SAVED");  
 }
 
 void loadMqttConfig() {
