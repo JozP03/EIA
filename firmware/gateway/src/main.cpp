@@ -7,7 +7,7 @@
 #include <BLEAdvertisedDevice.h>
 #include <Preferences.h>
 #include <time.h> 
-#include <LittleFS.h>
+#include <LittleFS.h> 
 
 Preferences preferences;
 
@@ -18,6 +18,7 @@ int mqtt_port = 8883;
 String mqtt_user = "";
 String mqtt_pass = "";
  
+// --- CERTYFIKAT ---
 const char* root_ca = \
   "-----BEGIN CERTIFICATE-----\n" \
   "MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw" \
@@ -72,12 +73,12 @@ struct Message {
     char payloadData[32];
 };
 
-// --- PAMIĘĆ HISTORII ---
 struct HistoryRecord {
     uint32_t timestamp;  
     char sensorId[12];   
     char payloadData[32];
 };
+
 #define MAX_HISTORY_RECORDS 250 
 HistoryRecord historyBuffer[MAX_HISTORY_RECORDS];
 int historyIndex = 0;
@@ -107,7 +108,7 @@ void loadHistoryFromFlash() {
     
     File file = LittleFS.open("/history.bin", FILE_READ);
     if (!file || file.size() == 0) {
-        if (Serial) Serial.println("Brak zapisanej historii. Zaczynam od zera.");
+        if (Serial) Serial.println("Brak zapisanej historii");
         return;
     }
     
@@ -116,13 +117,13 @@ void loadHistoryFromFlash() {
     file.read((uint8_t*)&historyWrapped, sizeof(historyWrapped));
     file.close();
     
-    if (Serial) Serial.println("Pomyślnie wczytano historię z Flash.");
+    if (Serial) Serial.println("wczytano historie.");
 }
 
 void saveHistoryToFlash() {
     File file = LittleFS.open("/history.bin", FILE_WRITE);
     if (!file) {
-        if (Serial) Serial.println("Błąd zapisu historii do Flash!");
+        if (Serial) Serial.println("Błąd zapisu historii");
         return;
     }
     file.write((uint8_t*)historyBuffer, sizeof(historyBuffer));
@@ -131,23 +132,26 @@ void saveHistoryToFlash() {
     file.close();
 }
 
-// --- CALLBACK BLE ---
+// --- CALLBACK BLE---
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
     if (advertisedDevice.haveManufacturerData()) {
       std::string strManufacturerData = advertisedDevice.getManufacturerData();
-      String data = String(strManufacturerData.c_str());
+      
+      const char* dataPtr = strManufacturerData.c_str();
 
-      if (data.startsWith("ESP_")) { 
-        int semiColonIndex = data.indexOf(';');
-        if (semiColonIndex != -1) {
-          String idStr = data.substring(0, semiColonIndex);
-          String restOfData = data.substring(semiColonIndex + 1);
-
+      if (strncmp(dataPtr, "ESP_", 4) == 0) { 
+        const char* semiColonIndex = strchr(dataPtr, ';');
+        
+        if (semiColonIndex != nullptr) {
           Message msg;
           memset(&msg, 0, sizeof(Message));
-          snprintf(msg.sensorId, sizeof(msg.sensorId), "%s", idStr.c_str());
-          snprintf(msg.payloadData, sizeof(msg.payloadData), "%s", restOfData.c_str());
+          
+          int idLen = semiColonIndex - dataPtr;
+          if (idLen > 11) idLen = 11;
+          strncpy(msg.sensorId, dataPtr, idLen);
+          
+          strncpy(msg.payloadData, semiColonIndex + 1, sizeof(msg.payloadData) - 1);
 
           bool isNewData = false;
           bool found = false;
@@ -193,14 +197,17 @@ void setup() {
   loadHistoryFromFlash();
   
   WiFi.mode(WIFI_STA);
-  WiFi.setAutoReconnect(true);
+  WiFi.setAutoReconnect(true); 
   WiFi.disconnect();
 
   valueQueue = xQueueCreate(15, sizeof(Message));
   espClient.setCACert(root_ca);
+  
+  mqttClient.setBufferSize(512); 
+  mqttClient.setKeepAlive(60); 
+  
   mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
   mqttClient.setCallback(mqttCallback);
-  mqttClient.setKeepAlive(60);
 
   BLEDevice::init("");
   pBLEScan = BLEDevice::getScan();
@@ -223,7 +230,7 @@ void setup() {
   }
 
   xTaskCreate(bleTask, "BLE_TASK", 6000, NULL, 1, NULL);
-  xTaskCreate(mqttTask, "MQTT_TASK", 10240, NULL, 2, NULL);
+  xTaskCreate(mqttTask, "MQTT_TASK", 10240, NULL, 1, NULL);
 }
 
 void loop() {
@@ -242,7 +249,7 @@ void loop() {
     }
     else if (input.equalsIgnoreCase("RESET")) {
         preferences.begin("wifi", false); preferences.clear(); preferences.end(); 
-        LittleFS.remove("/history.bin");
+        LittleFS.remove("/history.bin"); 
         ESP.restart();
     }
     else if (input.startsWith("MQTT:")) handleMqttConfig(input);
@@ -275,15 +282,24 @@ void bleTask(void *pvParameters) {
 void mqttTask(void *pvParameters) {
     Message msg;
     static unsigned long lastReconnectAttempt = 0;
+    static unsigned long mqttOfflineTime = 0;
 
     while (true) {
         if (WiFi.status() == WL_CONNECTED && mqtt_server.length() > 0) {
             if (!mqttClient.connected()) {
+                
+                if (mqttOfflineTime == 0) mqttOfflineTime = millis();
+                if (millis() - mqttOfflineTime > 180000) {
+                    if (Serial) Serial.println("Restart");
+                    ESP.restart();
+                }
+                
                 if (millis() - lastReconnectAttempt > 5000) {
                     lastReconnectAttempt = millis();
                     reconnectMqtt();
                 }
             } else {
+                mqttOfflineTime = 0;
                 mqttClient.loop();
                 
                 unsigned long now_ms = millis();
@@ -387,7 +403,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
 }
 
-// --- WIFI ---
+// --- FUNKCJE WIFI ---
 bool connectToSavedWifi() {
   preferences.begin("wifi", false);
   int mode = preferences.getInt("mode", -1);
@@ -475,7 +491,8 @@ void handleStaticConnectionRequest(String cmd) {
     return;
   }
   IPAddress dns(8, 8, 8, 8);
-  if (!WiFi.config(local_IP, gateway, subnet, dns)) {
+  IPAddress dns2(8, 8, 4, 4);
+  if (!WiFi.config(local_IP, gateway, subnet, dns, dns2)) {
     if (Serial) Serial.println("STATUS:ERROR_CONFIG_FAILED");
     return;
   }
