@@ -76,6 +76,10 @@ public class DashboardViewModel extends AndroidViewModel {
                         updateSensorData(updatedDevice, event.getSensorId(), event.getPayload());
                         newList.add(updatedDevice);
                         anyUpdated = true;
+                    } else if (event.getType() == MqttEvent.Type.HISTORY) {
+                        processHistoryMessage(updatedDevice, event.getPayload());
+                        newList.add(updatedDevice);
+                        anyUpdated = true;
                     } else {
                         newList.add(device);
                     }
@@ -105,6 +109,64 @@ public class DashboardViewModel extends AndroidViewModel {
                 persistDevices(newList);
             }
         });
+    }
+
+    private void processHistoryMessage(Device device, String payload) {
+        if (payload == null || payload.equalsIgnoreCase("EOF")) {
+            Log.d(TAG, "Koniec przesyłania historii (EOF)");
+            return;
+        }
+
+        try {
+            String[] parts = payload.split(";");
+            if (parts.length < 3) return;
+
+            long timestamp = Long.parseLong(parts[0]) * 1000L; // Zamiana sekund na milisekundy
+            String physicalId = parts[1];
+
+            List<Sensor> sensors = device.getSensorList();
+            if (sensors == null) {
+                sensors = new ArrayList<>();
+                device.setSensorList(sensors);
+            }
+
+            boolean firstInMessage = true;
+            for (int i = 2; i < parts.length; i++) {
+                String measure = parts[i].trim();
+                if (measure.contains(":")) {
+                    String[] kv = measure.split(":", 2);
+                    String prefix = kv[0].trim();
+                    String valStr = kv[1].trim();
+                    
+                    if (valStr.isEmpty()) continue;
+
+                    float value = Float.parseFloat(valStr);
+                    String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
+                    
+                    String logicSensorId = physicalId + "_" + prefix;
+                    // Dla historii isPrimary ustawiamy tylko jeśli sensor już istnieje i jest primary, 
+                    // lub jeśli to zupełnie nowy sensor (wtedy pierwszy z brzegu)
+                    boolean isPrimary = false;
+                    Sensor existing = null;
+                    for (Sensor s : sensors) {
+                        if (s.getId().equals(logicSensorId)) {
+                            existing = s;
+                            break;
+                        }
+                    }
+                    if (existing != null) {
+                        isPrimary = existing.isPrimary();
+                    } else if (firstInMessage) {
+                        isPrimary = true;
+                        firstInMessage = false;
+                    }
+
+                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, physicalId, timestamp);
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Błąd parsowania historii: " + payload + " -> " + e.getMessage());
+        }
     }
 
     private void updateSensorData(Device device, String sensorId, String payload) {
@@ -145,7 +207,7 @@ public class DashboardViewModel extends AndroidViewModel {
                     String logicSensorId = sensorId + "_" + prefix;
                     boolean isPrimary = !firstFound; // Pierwszy w stringu jest główny
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId);
+                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, System.currentTimeMillis());
                     firstFound = true;
                 }
             }
@@ -155,7 +217,7 @@ public class DashboardViewModel extends AndroidViewModel {
         }
     }
 
-    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId) {
+    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, long timestamp) {
         boolean found = false;
         for (Sensor s : sensors) {
             if (s.getId().equals(id)) {
@@ -185,7 +247,7 @@ public class DashboardViewModel extends AndroidViewModel {
         }
 
         // zapisanie do bazy danych
-        com.eia.app.db.SensorReading reading = new com.eia.app.db.SensorReading(id, value, System.currentTimeMillis());
+        com.eia.app.db.SensorReading reading = new com.eia.app.db.SensorReading(id, value, timestamp);
         com.eia.app.db.AppDatabase.databaseWriteExecutor.execute(() -> {
             db.readingDao().insert(reading);
         });

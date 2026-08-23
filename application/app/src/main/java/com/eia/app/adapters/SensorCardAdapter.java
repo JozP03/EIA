@@ -71,9 +71,14 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
     }
 
     private void setupChart(LineChart chart, List<SensorReading> readings, String unit) {
+        if (readings.isEmpty()) return;
+
         List<Entry> entries = new ArrayList<>();
-        for (int i = 0; i < readings.size(); i++) {
-            entries.add(new Entry(i, readings.get(i).getValue()));
+        long firstTimestamp = readings.get(0).getTimestamp();
+
+        for (SensorReading reading : readings) {
+            float x = (float) (reading.getTimestamp() - firstTimestamp) / 1000f; 
+            entries.add(new Entry(x, reading.getValue()));
         }
 
         LineDataSet dataSet = new LineDataSet(entries, unit);

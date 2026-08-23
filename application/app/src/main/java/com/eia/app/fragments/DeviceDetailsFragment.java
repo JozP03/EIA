@@ -1,6 +1,7 @@
 package com.eia.app.fragments;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,6 +49,12 @@ public class DeviceDetailsFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        if (deviceId != null) {
+            String commandTopic = deviceId + "/command";
+            com.eia.app.repositories.MqttRepository.getInstance().publishCommand(commandTopic, "GET_HISTORY");
+            Log.d("DeviceDetailsFragment", "Wysłano prośbę o historię dla: " + deviceId);
+        }
 
         tvDeviceName = view.findViewById(R.id.tvDeviceName);
         RecyclerView rvSensors = view.findViewById(R.id.rvSensorCards);
