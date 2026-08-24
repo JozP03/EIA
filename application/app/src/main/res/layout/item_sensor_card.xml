@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="16dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="@color/card_bg"
+    app:strokeColor="@color/border_gray"
+    app:strokeWidth="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp">
+
+        <View
+            android:id="@+id/ivSensorIcon"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@color/accent_blue"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvSensorName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:text="Temperatura"
+            android:textColor="@color/text_muted"
+            android:textSize="14sp"
+            app:layout_constraintBottom_toBottomOf="@id/ivSensorIcon"
+            app:layout_constraintEnd_toStartOf="@id/tvSensorValue"
+            app:layout_constraintStart_toEndOf="@id/ivSensorIcon"
+            app:layout_constraintTop_toTopOf="@id/ivSensorIcon" />
+
+        <TextView
+            android:id="@+id/tvSensorValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="24.5 °C"
+            android:textColor="@color/text_main"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="@id/ivSensorIcon"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ivSensorIcon" />
+
+        <com.github.mikephil.charting.charts.LineChart
+            android:id="@+id/sensorChart"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:layout_marginTop="20dp"
+            app:layout_constraintTop_toBottomOf="@id/ivSensorIcon" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.cardview.widget.CardView>

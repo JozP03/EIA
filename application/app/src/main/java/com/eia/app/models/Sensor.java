@@ -2,23 +2,27 @@ package com.eia.app.models;
 
 public class Sensor {
     private String id;
-    private String type;
     private String name;
     private String unit;
     private float value;
     private boolean hasError;
+    private String prefix;
+    private boolean isPrimary;
+    private String physicalId;
 
-    public Sensor(String id, String type, String name, String unit, float value) {
-        this(id, type, name, unit, value, false);
+    public Sensor(String id, String name, String unit, float value) {
+        this(id, name, unit, value, false, "", false, "");
     }
 
-    public Sensor(String id, String type, String name, String unit, float value, boolean hasError) {
+    public Sensor(String id, String name, String unit, float value, boolean hasError, String prefix, boolean isPrimary, String physicalId) {
         this.id = id;
-        this.type = type;
         this.name = name;
         this.unit = unit;
         this.value = value;
         this.hasError = hasError;
+        this.prefix = prefix;
+        this.isPrimary = isPrimary;
+        this.physicalId = physicalId;
     }
 
     public String getId() {
@@ -27,14 +31,6 @@ public class Sensor {
 
     public void setId(String id) {
         this.id = id;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
     }
 
     public String getName() {
@@ -69,6 +65,30 @@ public class Sensor {
         this.hasError = hasError;
     }
 
+    public String getPrefix() {
+        return prefix;
+    }
+
+    public void setPrefix(String prefix) {
+        this.prefix = prefix;
+    }
+
+    public boolean isPrimary() {
+        return isPrimary;
+    }
+
+    public void setPrimary(boolean primary) {
+        isPrimary = primary;
+    }
+
+    public String getPhysicalId() {
+        return physicalId;
+    }
+
+    public void setPhysicalId(String physicalId) {
+        this.physicalId = physicalId;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -76,14 +96,16 @@ public class Sensor {
         Sensor sensor = (Sensor) o;
         return Float.compare(sensor.value, value) == 0 &&
                 hasError == sensor.hasError &&
+                isPrimary == sensor.isPrimary &&
                 id.equals(sensor.id) &&
-                type.equals(sensor.type) &&
                 name.equals(sensor.name) &&
-                unit.equals(sensor.unit);
+                unit.equals(sensor.unit) &&
+                java.util.Objects.equals(prefix, sensor.prefix) &&
+                java.util.Objects.equals(physicalId, sensor.physicalId);
     }
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(id, type, name, unit, value, hasError);
+        return java.util.Objects.hash(id, name, unit, value, hasError, prefix, isPrimary, physicalId);
     }
 }
