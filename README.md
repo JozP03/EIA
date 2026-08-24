@@ -1,5 +1,5 @@
 # EIA
-ESP iot aplication with software
+ESP Iot application with software
 
 # Libraries
 | Firmware | Android |
