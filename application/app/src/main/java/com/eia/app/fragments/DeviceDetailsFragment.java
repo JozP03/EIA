@@ -97,8 +97,19 @@ public class DeviceDetailsFragment extends Fragment {
         if (!aiKey.trim().isEmpty()) {
             fabAi.setVisibility(View.VISIBLE);
             fabAi.setOnClickListener(v -> {
-                Toast.makeText(getContext(), "Czat AI dla " + deviceId + " (w budowie)", Toast.LENGTH_SHORT).show();
+                showAiChat();
             });
         }
+    }
+
+    private void showAiChat() {
+        com.google.android.material.bottomsheet.BottomSheetDialog bottomSheet = new com.google.android.material.bottomsheet.BottomSheetDialog(requireContext());
+        View view = getLayoutInflater().inflate(R.layout.layout_ai_chat, null);
+
+        view.findViewById(R.id.btnCloseChat).setOnClickListener(v -> bottomSheet.dismiss());
+
+        bottomSheet.setContentView(view);
+        bottomSheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        bottomSheet.show();
     }
 }
