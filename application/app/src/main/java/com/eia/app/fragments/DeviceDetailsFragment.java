@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -85,5 +86,19 @@ public class DeviceDetailsFragment extends Fragment {
                 }
             }
         });
+
+        // Obsługa dymka AI
+        View fabAi = view.findViewById(R.id.fabAiChat);
+        android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE);
+        String aiKey = prefs.getString("ai_api_key", "");
+        
+        Log.d("DeviceDetailsFragment", "Klucz AI: [" + aiKey + "]");
+
+        if (!aiKey.trim().isEmpty()) {
+            fabAi.setVisibility(View.VISIBLE);
+            fabAi.setOnClickListener(v -> {
+                Toast.makeText(getContext(), "Czat AI dla " + deviceId + " (w budowie)", Toast.LENGTH_SHORT).show();
+            });
+        }
     }
 }

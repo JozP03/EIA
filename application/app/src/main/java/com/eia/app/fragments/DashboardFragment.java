@@ -134,6 +134,20 @@ public class DashboardFragment extends Fragment {
             }
         });
 
+        // Obsługa dymka AI
+        View fabAi = view.findViewById(R.id.fabAiChat);
+        android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE);
+        String aiKey = prefs.getString("ai_api_key", "");
+        
+        Log.d("DashboardFragment", "Klucz AI: [" + aiKey + "]");
+
+        if (!aiKey.trim().isEmpty()) {
+            fabAi.setVisibility(View.VISIBLE);
+            fabAi.setOnClickListener(v -> {
+                Toast.makeText(getContext(), "Czat AI (w budowie)", Toast.LENGTH_SHORT).show();
+            });
+        }
+
     }
 
     private void showDeviceActions(Device device) {
