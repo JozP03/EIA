@@ -1,9 +1,11 @@
 package com.eia.app.db;
 
 import androidx.room.Entity;
+import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
-@Entity(tableName = "sensor_readings")
+@Entity(tableName = "sensor_readings", 
+        indices = {@Index(value = {"sensorId", "timestamp"}, unique = true)})
 public class SensorReading {
     @PrimaryKey(autoGenerate = true)
     private int id;

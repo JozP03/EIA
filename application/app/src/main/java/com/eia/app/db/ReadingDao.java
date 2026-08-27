@@ -9,7 +9,7 @@ import java.util.List;
 
 @Dao
 public interface ReadingDao {
-    @Insert
+    @Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE)
     void insert(SensorReading reading);
 
     @Query("SELECT * FROM sensor_readings WHERE sensorId = :sensorId ORDER BY timestamp ASC")

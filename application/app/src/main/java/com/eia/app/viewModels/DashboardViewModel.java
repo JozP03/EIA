@@ -31,6 +31,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final Gson gson = new Gson();
     private final SharedPreferences prefs;
     private final com.eia.app.db.AppDatabase db;
+    private final java.util.Map<String, Long> lastSyncTimes = new java.util.HashMap<>();
 
 
     public DashboardViewModel(@NonNull Application application) {
@@ -330,6 +331,20 @@ public class DashboardViewModel extends AndroidViewModel {
 
     public LiveData<List<Device>> getDevices() {
         return devices;
+    }
+
+    public void requestHistorySync(String deviceId) {
+        long currentTime = System.currentTimeMillis();
+        Long lastSync = lastSyncTimes.get(deviceId);
+
+        if (lastSync == null || (currentTime - lastSync) > 2 * 60 * 1000) {
+            String commandTopic = deviceId + "/command";
+            MqttRepository.getInstance().publishCommand(commandTopic, "GET_HISTORY");
+            lastSyncTimes.put(deviceId, currentTime);
+            Log.d(TAG, "Wysłano prośbę o historię dla: " + deviceId);
+        } else {
+            Log.d(TAG, "Synchronizacja zablokowana (throttle) dla: " + deviceId);
+        }
     }
 
     public void initMqttConnection() {

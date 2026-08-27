@@ -50,10 +50,9 @@ public class DeviceDetailsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        // Synchronizacja historii z bramki (z filtrem częstotliwości)
         if (deviceId != null) {
-            String commandTopic = deviceId + "/command";
-            com.eia.app.repositories.MqttRepository.getInstance().publishCommand(commandTopic, "GET_HISTORY");
-            Log.d("DeviceDetailsFragment", "Wysłano prośbę o historię dla: " + deviceId);
+            viewModel.requestHistorySync(deviceId);
         }
 
         tvDeviceName = view.findViewById(R.id.tvDeviceName);
