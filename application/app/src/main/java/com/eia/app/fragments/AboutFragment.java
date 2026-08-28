@@ -59,7 +59,7 @@ public class AboutFragment extends Fragment {
             }
         });
 
-        // Obsługa kliknięcia w "O aplikacji" na dole panelu bocznego
+        // Obsługa kliknięcia w "O aplikacji"
         View navAbout = view.findViewById(R.id.btnNavAbout);
         if (navAbout != null) {
             navAbout.setOnClickListener(v -> {
@@ -67,7 +67,6 @@ public class AboutFragment extends Fragment {
                 if (drawer != null) {
                     drawer.closeDrawers();
                 }
-                // Jesteśmy już tutaj, więc tylko zamykamy drawer
             });
         }
     }

@@ -155,7 +155,7 @@ public class DashboardFragment extends Fragment {
         View view = getLayoutInflater().inflate(R.layout.layout_ai_chat, null);
         
         view.findViewById(R.id.btnCloseChat).setOnClickListener(v -> bottomSheet.dismiss());
-        
+
         bottomSheet.setContentView(view);
         bottomSheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
         bottomSheet.show();
