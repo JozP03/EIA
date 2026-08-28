@@ -24,6 +24,8 @@ import android.widget.Toast;
 import com.eia.app.R;
 import com.eia.app.adapters.DeviceAdapter;
 import com.eia.app.models.Device;
+import com.eia.app.providers.AiFactory;
+import com.eia.app.providers.AiProvider;
 import com.eia.app.repositories.MqttRepository;
 import com.eia.app.viewModels.DashboardViewModel;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -155,6 +157,34 @@ public class DashboardFragment extends Fragment {
         View view = getLayoutInflater().inflate(R.layout.layout_ai_chat, null);
         
         view.findViewById(R.id.btnCloseChat).setOnClickListener(v -> bottomSheet.dismiss());
+
+        android.widget.EditText etMessage = view.findViewById(R.id.etChatMessage);
+        view.findViewById(R.id.btnSendMessage).setOnClickListener(v -> {
+            String text = etMessage.getText().toString().trim();
+            if (!text.isEmpty()) {
+                etMessage.setText("");
+                AiProvider provider = AiFactory.getProvider(requireContext());
+                provider.askAi(text, new AiProvider.AiCallback() {
+                    @Override
+                    public void onSuccess(String response) {
+                        if (isAdded()) {
+                            getActivity().runOnUiThread(() -> 
+                                Toast.makeText(getContext(), "AI: " + response, Toast.LENGTH_LONG).show()
+                            );
+                        }
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        if (isAdded()) {
+                            getActivity().runOnUiThread(() ->
+                                Toast.makeText(getContext(), "Błąd: " + error, Toast.LENGTH_SHORT).show()
+                            );
+                        }
+                    }
+                });
+            }
+        });
 
         bottomSheet.setContentView(view);
         bottomSheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);

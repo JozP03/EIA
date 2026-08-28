@@ -20,6 +20,8 @@ import com.eia.app.R;
 import com.eia.app.adapters.SensorGroupAdapter;
 import com.eia.app.models.Device;
 import com.eia.app.models.Sensor;
+import com.eia.app.providers.AiFactory;
+import com.eia.app.providers.AiProvider;
 import com.eia.app.viewModels.DashboardViewModel;
 
 import java.util.ArrayList;
@@ -107,6 +109,34 @@ public class DeviceDetailsFragment extends Fragment {
         View view = getLayoutInflater().inflate(R.layout.layout_ai_chat, null);
 
         view.findViewById(R.id.btnCloseChat).setOnClickListener(v -> bottomSheet.dismiss());
+
+        android.widget.EditText etMessage = view.findViewById(R.id.etChatMessage);
+        view.findViewById(R.id.btnSendMessage).setOnClickListener(v -> {
+            String text = etMessage.getText().toString().trim();
+            if (!text.isEmpty()) {
+                etMessage.setText("");
+                AiProvider provider = AiFactory.getProvider(requireContext());
+                provider.askAi(text, new AiProvider.AiCallback() {
+                    @Override
+                    public void onSuccess(String response) {
+                        if (isAdded()) {
+                            getActivity().runOnUiThread(() -> 
+                                Toast.makeText(getContext(), "AI (" + deviceId + "): " + response, Toast.LENGTH_LONG).show()
+                            );
+                        }
+                    }
+
+                    @Override
+                    public void onError(String error) {
+                        if (isAdded()) {
+                            getActivity().runOnUiThread(() ->
+                                Toast.makeText(getContext(), "Błąd AI: " + error, Toast.LENGTH_SHORT).show()
+                            );
+                        }
+                    }
+                });
+            }
+        });
 
         bottomSheet.setContentView(view);
         bottomSheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
