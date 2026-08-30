@@ -165,6 +165,7 @@ public class DashboardFragment extends Fragment {
         rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
         rv.setAdapter(chatAdapter);
 
+        android.widget.ProgressBar progressBar = view.findViewById(R.id.pbAiLoading);
         android.widget.EditText etMessage = view.findViewById(R.id.etChatMessage);
         view.findViewById(R.id.btnSendMessage).setOnClickListener(v -> {
             String text = etMessage.getText().toString().trim();
@@ -173,12 +174,15 @@ public class DashboardFragment extends Fragment {
                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
                 etMessage.setText("");
 
+                progressBar.setVisibility(View.VISIBLE);
+
                 AiProvider provider = AiFactory.getProvider(requireContext());
                 provider.askAi(text, new AiProvider.AiCallback() {
                     @Override
                     public void onSuccess(String response) {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
                                 chatAdapter.addMessage(new ChatMessage(response, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
                             });
@@ -188,9 +192,11 @@ public class DashboardFragment extends Fragment {
                     @Override
                     public void onError(String error) {
                         if (isAdded()) {
-                            getActivity().runOnUiThread(() ->
-                                Toast.makeText(getContext(), "Błąd AI: " + error, Toast.LENGTH_SHORT).show()
-                            );
+                            getActivity().runOnUiThread(() -> {
+                                progressBar.setVisibility(View.GONE);
+                                chatAdapter.addMessage(new ChatMessage("Błąd AI: " + error, ChatMessage.Type.AI));
+                                rv.scrollToPosition(chatAdapter.getItemCount() - 1);
+                            });
                         }
                     }
                 });

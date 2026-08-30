@@ -9,6 +9,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
 import retrofit2.http.Query;
+import okhttp3.OkHttpClient;
+import java.util.concurrent.TimeUnit;
 
 import java.util.Collections;
 import java.util.List;
@@ -20,8 +22,16 @@ public class GeminiProvider implements AiProvider {
 
     public GeminiProvider(String baseUrl, String apiKey) {
         this.apiKey = apiKey;
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .build();
+
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl)
+                .client(client)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
         this.service = retrofit.create(GeminiService.class);
@@ -36,10 +46,19 @@ public class GeminiProvider implements AiProvider {
             public void onResponse(Call<GeminiResponse> call, Response<GeminiResponse> response) {
                 if (response.isSuccessful() && response.body() != null) {
                     try {
-                        String text = response.body().candidates.get(0).content.parts.get(0).text;
-                        callback.onSuccess(text);
+                        GeminiResponse body = response.body();
+                        if (body.candidates != null && !body.candidates.isEmpty()) {
+                            GeminiResponse.Candidate candidate = body.candidates.get(0);
+                            if (candidate.content != null && candidate.content.parts != null && !candidate.content.parts.isEmpty()) {
+                                String text = candidate.content.parts.get(0).text;
+                                callback.onSuccess(text);
+                                return;
+                            }
+                        }
+                        callback.onError("AI nie wygenerowało odpowiedzi (możliwa blokada treści).");
                     } catch (Exception e) {
-                        callback.onError("Błąd przetwarzania odpowiedzi: " + e.getMessage());
+                        Log.e(TAG, "Błąd parsowania: ", e);
+                        callback.onError("Błąd przetwarzania odpowiedzi.");
                     }
                 } else {
                     callback.onError("Błąd API: " + response.code());

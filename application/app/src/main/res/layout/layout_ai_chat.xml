@@ -55,6 +55,16 @@
         android:paddingHorizontal="16dp"
         android:paddingBottom="16dp" />
 
+    <!-- Loading Indicator -->
+    <ProgressBar
+        android:id="@+id/pbAiLoading"
+        style="?android:attr/progressBarStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
