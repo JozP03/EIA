@@ -55,7 +55,7 @@ public class GeminiProvider implements AiProvider {
 
 
     interface GeminiService {
-        @POST("v1beta/models/gemini-3.1-flash-lite:generateContent")
+        @POST("v1beta/models/gemini-3.6-flash:generateContent")
         Call<GeminiResponse> generateContent(@Query("key") String apiKey, @Body GeminiRequest request);
     }
 

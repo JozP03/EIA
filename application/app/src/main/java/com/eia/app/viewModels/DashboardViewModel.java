@@ -145,8 +145,6 @@ public class DashboardViewModel extends AndroidViewModel {
                     String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
                     
                     String logicSensorId = physicalId + "_" + prefix;
-                    // Dla historii isPrimary ustawiamy tylko jeśli sensor już istnieje i jest primary, 
-                    // lub jeśli to zupełnie nowy sensor (wtedy pierwszy z brzegu)
                     boolean isPrimary = false;
                     Sensor existing = null;
                     for (Sensor s : sensors) {
@@ -182,13 +180,11 @@ public class DashboardViewModel extends AndroidViewModel {
         try {
             String trimmedPayload = payload.trim();
 
-            // Obsługa stanu błędu lub offline
             if ("ERR:NoSensors".equalsIgnoreCase(trimmedPayload) || "offline".equalsIgnoreCase(trimmedPayload)) {
                 updateAllSensorsError(sensors, sensorId, true);
                 return;
             }
 
-            // Rozdzielamy po średniku (np. T:24.3;H:70)
             String[] parts = trimmedPayload.split(";");
             boolean firstFound = false;
 
@@ -203,10 +199,9 @@ public class DashboardViewModel extends AndroidViewModel {
 
                     String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
                     float value = Float.parseFloat(valStr);
-                    
-                    // Unikalne ID dla każdego typu danych z tego czujnika
+
                     String logicSensorId = sensorId + "_" + prefix;
-                    boolean isPrimary = !firstFound; // Pierwszy w stringu jest główny
+                    boolean isPrimary = !firstFound;
 
                     updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, System.currentTimeMillis());
                     firstFound = true;
@@ -234,7 +229,6 @@ public class DashboardViewModel extends AndroidViewModel {
         }
 
         if (!found) {
-            // Sprawdzamy czy mamy już jakąś nazwę dla tego fizycznego ID (boxy)
             String existingName = null;
             for(Sensor s : sensors) {
                 if(physicalId.equals(s.getPhysicalId())) {

@@ -23,6 +23,8 @@ import android.widget.Toast;
 
 import com.eia.app.R;
 import com.eia.app.adapters.DeviceAdapter;
+import com.eia.app.adapters.ChatAdapter;
+import com.eia.app.models.ChatMessage;
 import com.eia.app.models.Device;
 import com.eia.app.providers.AiFactory;
 import com.eia.app.providers.AiProvider;
@@ -158,19 +160,28 @@ public class DashboardFragment extends Fragment {
         
         view.findViewById(R.id.btnCloseChat).setOnClickListener(v -> bottomSheet.dismiss());
 
+        androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvChatMessages);
+        ChatAdapter chatAdapter = new ChatAdapter();
+        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
+        rv.setAdapter(chatAdapter);
+
         android.widget.EditText etMessage = view.findViewById(R.id.etChatMessage);
         view.findViewById(R.id.btnSendMessage).setOnClickListener(v -> {
             String text = etMessage.getText().toString().trim();
             if (!text.isEmpty()) {
+                chatAdapter.addMessage(new ChatMessage(text, ChatMessage.Type.USER));
+                rv.scrollToPosition(chatAdapter.getItemCount() - 1);
                 etMessage.setText("");
+
                 AiProvider provider = AiFactory.getProvider(requireContext());
                 provider.askAi(text, new AiProvider.AiCallback() {
                     @Override
                     public void onSuccess(String response) {
                         if (isAdded()) {
-                            getActivity().runOnUiThread(() -> 
-                                Toast.makeText(getContext(), "AI: " + response, Toast.LENGTH_LONG).show()
-                            );
+                            getActivity().runOnUiThread(() -> {
+                                chatAdapter.addMessage(new ChatMessage(response, ChatMessage.Type.AI));
+                                rv.scrollToPosition(chatAdapter.getItemCount() - 1);
+                            });
                         }
                     }
 
@@ -178,7 +189,7 @@ public class DashboardFragment extends Fragment {
                     public void onError(String error) {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() ->
-                                Toast.makeText(getContext(), "Błąd: " + error, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(getContext(), "Błąd AI: " + error, Toast.LENGTH_SHORT).show()
                             );
                         }
                     }
