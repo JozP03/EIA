@@ -213,6 +213,78 @@ public class DashboardViewModel extends AndroidViewModel {
         }
     }
 
+    public String getAiSystemContext() {
+        StringBuilder context = new StringBuilder();
+        context.append("Jesteś inteligentnym asystentem systemu EIA.AI. ");
+        context.append("Pomagasz użytkownikowi monitorować jego dom. ");
+        context.append("Oto aktualne dane z systemu:\n\n");
+
+        List<Device> currentList = devices.getValue();
+        if (currentList == null || currentList.isEmpty()) {
+            context.append("- Brak skonfigurowanych urządzeń.\n");
+        } else {
+            for (Device d : currentList) {
+                context.append("- Urządzenie: ").append(d.getName())
+                       .append(" (Status: ").append(d.isOnline() ? "ONLINE" : "OFFLINE").append(")\n");
+                
+                if (d.getSensorList() != null) {
+                    for (com.eia.app.models.Sensor s : d.getSensorList()) {
+                        if (s.isHasError()) {
+                            context.append("  * ").append(s.getName()).append(": BŁĄD/BRAK DANYCH\n");
+                        } else {
+                            context.append("  * ").append(s.getName()).append(": ")
+                                   .append(s.getValue()).append(" ").append(s.getUnit()).append("\n");
+                        }
+                    }
+                }
+            }
+        }
+        context.append("\nZASADY STEROWANIA:\n");
+        context.append("1. Możesz zmieniać częstotliwość raportowania czujników.\n");
+        context.append("2. Aby to zrobić, dodaj na końcu odpowiedzi komendę: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
+        context.append("3. PHYSICAL_ID to identyfikator typu ESP_XXXX. SECONDS to liczba sekund (np. 300 dla 5 minut).\n");
+        context.append("4. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
+
+        context.append("\nINSTRUKCJA ODPOWIADANIA:\n");
+        context.append("- Odpowiadaj zawsze w języku, w którym napisał użytkownik.\n");
+        context.append("- Odpowiadaj bardzo krótko, konkretnie i wyłącznie na temat.\n");
+        context.append("- Nie lej wody, unikaj długich wstępów i zbędnych zdań.\n");
+        context.append("- Jeśli użytkownik pyta o dane, podaj je od razu.\n");
+
+        context.append("\nNa podstawie powyższych danych odpowiedz na pytanie użytkownika.");
+        return context.toString();
+    }
+
+    public String handleAiResponseAndGetCleanText(String deviceId, String response) {
+        if (response == null) return "";
+
+        if (response.contains("[CMD:SET_INTERVAL:")) {
+            try {
+                int start = response.indexOf("[CMD:");
+                int end = response.indexOf("]", start);
+                String fullCmd = response.substring(start + 5, end);
+                String[] parts = fullCmd.split(":");
+                
+                if (parts.length >= 3) {
+                    String physicalId = parts[1];
+                    String seconds = parts[2];
+
+                    // Format: id_bramki/id_esp/config z treścią INTERVAL:sekundy
+                    String topic = deviceId + "/" + physicalId + "/config";
+                    String payload = "INTERVAL:" + seconds;
+                    com.eia.app.repositories.MqttRepository.getInstance().publishCommand(topic, payload);
+                    Log.d(TAG, "AI wysłało komendę MQTT: " + topic + " -> " + payload);
+                }
+                
+                // Zwracamy tekst bez tagu komendy
+                return response.substring(0, start).trim() + response.substring(end + 1).trim();
+            } catch (Exception e) {
+                Log.e(TAG, "Błąd parsowania komendy AI: " + e.getMessage());
+            }
+        }
+        return response;
+    }
+
     private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, long timestamp) {
         boolean found = false;
         for (Sensor s : sensors) {

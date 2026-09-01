@@ -128,14 +128,21 @@ public class DeviceDetailsFragment extends Fragment {
 
                 progressBar.setVisibility(View.VISIBLE);
 
+                // Budujemy pełny prompt z kontekstem urządzeń
+                String fullPrompt = viewModel.getAiSystemContext() + "\n\nPytanie użytkownika: " + text;
+
                 AiProvider provider = AiFactory.getProvider(requireContext());
-                provider.askAi(text, new AiProvider.AiCallback() {
+                provider.askAi(fullPrompt, new AiProvider.AiCallback() {
                     @Override
                     public void onSuccess(String response) {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() -> {
                                 progressBar.setVisibility(View.GONE);
-                                chatAdapter.addMessage(new ChatMessage(response, ChatMessage.Type.AI));
+                                
+                                // Przetwarzamy odpowiedź AI (szukamy komend dla tej bramki)
+                                String cleanText = viewModel.handleAiResponseAndGetCleanText(deviceId, response);
+                                
+                                chatAdapter.addMessage(new ChatMessage(cleanText, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
                             });
                         }
