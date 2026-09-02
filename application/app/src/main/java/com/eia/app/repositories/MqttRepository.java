@@ -133,10 +133,16 @@ public class MqttRepository {
                             eventStream.postValue(new MqttEvent(deviceId, secondPart, payload, MqttEvent.Type.DATA));
                         }
                     } else if (parts.length == 3) {
-                        // Opcjonalne wsparcie dla formatu deviceid/sensorid/value
+                        // id_bramki/id_czujnika/cos
                         String deviceId = parts[0];
                         String sensorId = parts[1];
-                        eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
+                        String thirdPart = parts[2];
+                        
+                        if (thirdPart.equals("config")) {
+                            eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.CONFIG));
+                        } else {
+                            eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
+                        }
                     }
                 })
                 .send()

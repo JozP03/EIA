@@ -268,15 +268,36 @@ public class DashboardViewModel extends AndroidViewModel {
                 if (parts.length >= 3) {
                     String physicalId = parts[1];
                     String seconds = parts[2];
+                    String targetDeviceId = deviceId;
 
-                    // Format: id_bramki/id_esp/config z treścią INTERVAL:sekundy
-                    String topic = deviceId + "/" + physicalId + "/config";
-                    String payload = "INTERVAL:" + seconds;
-                    com.eia.app.repositories.MqttRepository.getInstance().publishCommand(topic, payload);
-                    Log.d(TAG, "AI wysłało komendę MQTT: " + topic + " -> " + payload);
+                    if ("global".equals(deviceId)) {
+                        List<Device> currentList = devices.getValue();
+                        if (currentList != null) {
+                            for (Device d : currentList) {
+                                if (d.getSensorList() != null) {
+                                    for (Sensor s : d.getSensorList()) {
+                                        if (physicalId.equals(s.getPhysicalId())) {
+                                            targetDeviceId = d.getId();
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (!"global".equals(targetDeviceId)) break;
+                            }
+                        }
+                    }
+
+                    if (!"global".equals(targetDeviceId)) {
+                        // Format: id_bramki/id_esp/config z treścią INTERVAL:sekundy
+                        String topic = targetDeviceId + "/" + physicalId + "/config";
+                        String payload = "INTERVAL:" + seconds;
+                        com.eia.app.repositories.MqttRepository.getInstance().publishCommand(topic, payload);
+                        Log.d(TAG, "AI wysłało komendę MQTT: " + topic + " -> " + payload);
+                    } else {
+                        Log.w(TAG, "Nie znaleziono bramki dla sensora: " + physicalId);
+                    }
                 }
-                
-                // Zwracamy tekst bez tagu komendy
+
                 return response.substring(0, start).trim() + response.substring(end + 1).trim();
             } catch (Exception e) {
                 Log.e(TAG, "Błąd parsowania komendy AI: " + e.getMessage());
