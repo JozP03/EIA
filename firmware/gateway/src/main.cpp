@@ -84,6 +84,9 @@ HistoryRecord historyBuffer[MAX_HISTORY_RECORDS];
 int historyIndex = 0;
 bool historyWrapped = false; 
 bool triggerHistorySend = false;
+bool pendingBleConfig = false;
+char configTargetId[16] = {0};
+char configPayloadRaw[18] = {0};
 
 // --- PROTOTYPY ---
 void reconnectMqtt();
@@ -272,10 +275,36 @@ void loop() {
 
 // --- TASKS ---
 void bleTask(void *pvParameters) {
+    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+    
     while (true) {
-        pBLEScan->start(3, true);
-        pBLEScan->clearResults(); 
-        vTaskDelay(pdMS_TO_TICKS(500));
+        if (pendingBleConfig) {
+            pBLEScan->stop();
+            
+            BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
+            std::string strServiceData = "";
+            
+            char payload[32];
+            snprintf(payload, sizeof(payload), "%s;%s", configTargetId, configPayloadRaw);
+            strServiceData += payload;
+            oAdvertisementData.setManufacturerData(strServiceData);
+            
+            pAdvertising->setAdvertisementData(oAdvertisementData);
+            pAdvertising->start();
+            
+            if (Serial) Serial.printf("Rozglaszam: %s\n", payload);
+            
+            vTaskDelay(pdMS_TO_TICKS(5000));
+            
+            pAdvertising->stop();
+            pendingBleConfig = false;
+            if (Serial) Serial.println("Koniec nadawania.");
+            
+        } else {
+            pBLEScan->start(3, true);
+            pBLEScan->clearResults(); 
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
     }
 }
 
@@ -384,6 +413,12 @@ void reconnectMqtt() {
         
         String cmdTopic = gateId + "/command";
         mqttClient.subscribe(cmdTopic.c_str());
+
+        String configTopic = gateId + "/config";
+        mqttClient.subscribe(configTopic.c_str());
+
+        String sensorConfigTopic = gateId + "/+/config";
+        mqttClient.subscribe(sensorConfigTopic.c_str());
     }
 }
 
@@ -400,6 +435,21 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     if (topicStr.endsWith("/command") && payloadStr.equalsIgnoreCase("GET_HISTORY")) {
         triggerHistorySend = true;
+    }
+
+    else if (topicStr.startsWith(gateId + "/") && topicStr.endsWith("/config") && !topicStr.equals(gateId + "/config")) {
+        
+        int firstSlash = topicStr.indexOf('/');
+        int lastSlash = topicStr.lastIndexOf('/');
+        String targetId = topicStr.substring(firstSlash + 1, lastSlash);
+
+        strncpy(configTargetId, targetId.c_str(), sizeof(configTargetId) - 1);
+        strncpy(configPayloadRaw, payloadStr.c_str(), sizeof(configPayloadRaw) - 1);
+        configPayloadRaw[sizeof(configPayloadRaw) - 1] = '\0';
+        
+        pendingBleConfig = true;
+        
+        if (Serial) Serial.printf("przeslanie surowej wiadomosci do %s: %s\n", configTargetId, configPayloadRaw);
     }
 }
 
