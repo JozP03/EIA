@@ -4,10 +4,10 @@
         <item
             android:id="@+id/dashboardFragment"
             android:icon="@android:drawable/ic_menu_today"
-            android:title="Dashboard" />
+            android:title="@string/menu_dashboard" />
         <item
             android:id="@+id/settingsFragment"
             android:icon="@android:drawable/ic_menu_preferences"
-            android:title="Ustawienia" />
+            android:title="@string/menu_settings" />
     </group>
 </menu>

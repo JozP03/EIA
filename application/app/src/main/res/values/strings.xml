@@ -5,6 +5,50 @@
     <string name="back_button_description">Back</string>
     <string name="info_icon_description">Information</string>
     <string name="menu_button_description">Menu</string>
+    <string name="menu_dashboard">Dashboard</string>
+    <string name="menu_settings">Settings</string>
+
+    <!-- Initial Setup -->
+    <string name="setup_title">Initial Configuration</string>
+    <string name="setup_usb_conn">USB-C Connection</string>
+    <string name="setup_usb_instruction">Please connect\nthe device via USB</string>
+    <string name="setup_usb_sub_instruction">Make sure the USB cable is correctly plugged into the device.</string>
+    <string name="setup_btn_connect">Connect</string>
+    <string name="setup_btn_skip">Skip</string>
+
+    <!-- WiFi Scan -->
+    <string name="scan_title">Select Wi-Fi Network</string>
+    <string name="scan_subtitle">Available networks within range of the measurement device</string>
+    <string name="scan_hint">Search network...</string>
+    <string name="scan_btn_refresh">REFRESH</string>
+    <string name="scan_help_title">Don\'t see your network?</string>
+    <string name="scan_help_desc">Make sure the router is broadcasting in the 2.4GHz band.</string>
+    <string name="scan_btn_manual">MANUAL CONFIGURATION</string>
+
+    <!-- WiFi Config -->
+    <string name="config_title">Network Configuration</string>
+    <string name="config_subtitle">Connection parameter settings for the measurement device</string>
+    <string name="config_selected_wifi">SELECTED NETWORK</string>
+    <string name="config_lbl_password">NETWORK PASSWORD</string>
+    <string name="config_lbl_ip_type">IP ADDRESS ASSIGNMENT</string>
+    <string name="config_btn_static">Static IP</string>
+    <string name="config_btn_dhcp">DHCP</string>
+    <string name="config_lbl_ip_address">IP ADDRESS</string>
+    <string name="config_lbl_mask">MASK</string>
+    <string name="config_lbl_gateway">DEFAULT GATEWAY</string>
+    <string name="config_btn_submit">CONFIRM AND CONNECT</string>
+
+    <!-- Personalization / Device Setup -->
+    <string name="personalize_title">Personalization</string>
+    <string name="personalize_subtitle">Give the device a name and configure the connection to your MQTT broker</string>
+    <string name="personalize_lbl_name">DEVICE NAME</string>
+    <string name="personalize_hint_name">e.g. Garage Gateway</string>
+    <string name="personalize_lbl_mqtt_host">MQTT SERVER ADDRESS</string>
+    <string name="personalize_hint_mqtt_host">e.g. broker.hivemq.com</string>
+    <string name="personalize_lbl_mqtt_port">MQTT PORT</string>
+    <string name="personalize_lbl_mqtt_user">MQTT USER</string>
+    <string name="personalize_lbl_mqtt_pass">MQTT PASSWORD</string>
+    <string name="personalize_btn_finish">FINISH AND SAVE</string>
 
     <!-- Dashboard -->
     <string name="dashboard_title">Your Devices</string>
@@ -28,6 +72,7 @@
     <string name="ai_asistent_title">EIA.AI Assistant</string>
     <string name="ai_hint">Ask a question...</string>
     <string name="ai_loading">AI is thinking...</string>
+    <string name="ai_error_prefix">AI Error: %1$s</string>
     <string name="btn_nav_about">About the app</string>
 
     <!-- Settings -->
@@ -44,8 +89,8 @@
     <string name="btn_reset_factory">Reset to Factory Defaults</string>
 
     <!-- About -->
-    <string name="about_version_format">Version Beta %1$s</string>
-    <string name="about_description">EIA.AI is an intelligent system for monitoring and managing sensor networks, designed as part of an engineering project.</string>
+    <string name="about_version_format">Version Beta 1.0</string>
+    <string name="about_description">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua</string>
     <string name="about_authors_label">Authors</string>
     <string name="about_authors_list">None</string>
     <string name="about_copyright">© 2026 EIA Project.</string>
@@ -60,11 +105,29 @@
     <string name="dialog_delete_device_title">Delete device</string>
     <string name="dialog_delete_device_message">Are you sure you want to delete %1$s?</string>
     <string name="dialog_delete_device_confirm">Delete</string>
+    <string name="device_actions_title">Manage Device</string>
+    <string name="device_actions_desc">Change name or remove gateway from the list</string>
+    <string name="device_actions_hint">Device name</string>
+    <string name="device_actions_btn_save">SAVE CHANGES</string>
+    <string name="device_actions_btn_delete">DELETE DEVICE</string>
 
     <!-- Error Messages -->
     <string name="error_mqtt_host_required">MQTT broker address is required</string>
     <string name="error_mqtt_user_required">MQTT user is required</string>
     <string name="error_mqtt_pass_required">MQTT password is required</string>
+
+    <!-- Toasts for Setup -->
+    <string name="toast_usb_not_ready">Device is not ready</string>
+    <string name="toast_enter_password">Enter password!</string>
+    <string name="toast_fill_ip">Complete IP parameters!</string>
+    <string name="toast_sending_config">Sending configuration...</string>
+    <string name="toast_usb_disconnected">Device is not connected!</string>
+    <string name="toast_error_timeout">Error: Connection timeout</string>
+    <string name="toast_error_format">Error: Incorrect data format</string>
+    <string name="toast_fields_required">All fields are required!</string>
+    <string name="toast_usb_error">USB connection error!</string>
+    <string name="toast_config_saved">Configuration saved!</string>
+    <string name="toast_error_device_save">Error saving on device!</string>
 
     <!-- Formatting -->
     <string name="gateway_default_name">Gateway %1$s</string>

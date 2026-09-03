@@ -36,7 +36,7 @@
             android:id="@+id/tvTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Konfiguracja sieci"
+            android:text="@string/config_title"
             android:textColor="@color/text_main"
             android:textSize="32sp"
             android:textStyle="bold"
@@ -48,7 +48,7 @@
             android:id="@+id/tvSubtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Ustawienia parametrów połączenia dla urządzenia pomiarowego"
+            android:text="@string/config_subtitle"
             android:textColor="@color/text_muted"
             android:textSize="14sp"
             android:paddingHorizontal="24dp"
@@ -92,7 +92,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="WYBRANA SIEĆ"
+                        android:text="@string/config_selected_wifi"
                         android:textColor="@color/text_muted"
                         android:textSize="10sp"
                         android:textStyle="bold" />
@@ -114,7 +114,7 @@
             android:id="@+id/lblPassword"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="HASŁO SIECI"
+            android:text="@string/config_lbl_password"
             android:textColor="@color/text_muted"
             android:textSize="11sp"
             android:textStyle="bold"
@@ -149,7 +149,7 @@
             android:id="@+id/lblIpType"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="PRZYPISANIE ADRESU IP"
+            android:text="@string/config_lbl_ip_type"
             android:textColor="@color/text_muted"
             android:textSize="11sp"
             android:textStyle="bold"
@@ -172,7 +172,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="Statyczne IP"
+                android:text="@string/config_btn_static"
                 android:textAllCaps="false"
                 android:textColor="@color/white_bg"
                 android:textStyle="bold"
@@ -183,7 +183,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="DHCP"
+                android:text="@string/config_btn_dhcp"
                 android:textAllCaps="false"
                 android:textColor="@color/text_muted"
                 android:background="@drawable/bg_toggle_right" />
@@ -212,7 +212,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="ADRES IP"
+                        android:text="@string/config_lbl_ip_address"
                         android:textSize="10sp"
                         android:textStyle="bold"/>
                     <EditText
@@ -224,7 +224,8 @@
                         android:textColor="@color/text_main"
                         android:textSize="14sp"
                         android:paddingHorizontal="12dp"
-                        android:inputType="text"/>
+                        android:inputType="text"
+                        android:autofillHints="" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -236,7 +237,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="MASKA"
+                        android:text="@string/config_lbl_mask"
                         android:textSize="10sp"
                         android:textStyle="bold"/>
                     <EditText
@@ -248,7 +249,8 @@
                         android:textColor="@color/text_main"
                         android:textSize="14sp"
                         android:paddingHorizontal="12dp"
-                        android:inputType="text"/>
+                        android:inputType="text"
+                        android:autofillHints="" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -260,7 +262,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="BRAMA DOMYŚLNA"
+                    android:text="@string/config_lbl_gateway"
                     android:textSize="10sp"
                     android:textStyle="bold"/>
                 <EditText
@@ -272,7 +274,8 @@
                     android:textColor="@color/text_main"
                     android:textSize="14sp"
                     android:paddingHorizontal="12dp"
-                    android:inputType="text"/>
+                    android:inputType="text"
+                    android:autofillHints="" />
             </LinearLayout>
         </LinearLayout>
 
@@ -282,7 +285,7 @@
             android:layout_height="56dp"
             android:layout_marginHorizontal="24dp"
             android:layout_marginTop="40dp"
-            android:text="ZATWIERDŹ I POŁĄCZ"
+            android:text="@string/config_btn_submit"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@color/white_bg"

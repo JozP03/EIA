@@ -80,7 +80,7 @@ public class ScanFragment extends Fragment implements UsbSerialService.Connectio
             usbService.initUSB();
         } else {
             if (getContext() != null) {
-                Toast.makeText(getContext(), "Urządzenie nie jest gotowe", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.toast_usb_not_ready), Toast.LENGTH_SHORT).show();
             }
         }
     }

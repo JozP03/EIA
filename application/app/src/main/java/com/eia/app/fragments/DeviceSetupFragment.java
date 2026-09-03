@@ -68,9 +68,9 @@ public class DeviceSetupFragment extends Fragment implements UsbSerialService.Co
         loadingOverlay = view.findViewById(R.id.loadingOverlay);
 
         if (ssid != null) {
-            etDeviceName.setText("Bramka " + ssid);
+            etDeviceName.setText(getString(R.string.gateway_default_name, ssid));
         } else if (deviceId != null) {
-            etDeviceName.setText("Bramka " + deviceId);
+            etDeviceName.setText(getString(R.string.gateway_default_name, deviceId));
         }
 
         view.findViewById(R.id.btnBack).setOnClickListener(v -> {
@@ -90,7 +90,7 @@ public class DeviceSetupFragment extends Fragment implements UsbSerialService.Co
         String pass = etMqttPassword.getText().toString().trim();
 
         if (name.isEmpty() || host.isEmpty() || port.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-            Toast.makeText(getContext(), "Wszystkie pola są wymagane!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.toast_fields_required), Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -101,7 +101,7 @@ public class DeviceSetupFragment extends Fragment implements UsbSerialService.Co
             loadingOverlay.setVisibility(View.VISIBLE);
             usbService.sendCommand(command);
         } else {
-            Toast.makeText(getContext(), "Błąd połączenia USB!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), getString(R.string.toast_usb_error), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -158,7 +158,7 @@ public class DeviceSetupFragment extends Fragment implements UsbSerialService.Co
                 Device newDevice = new Device(deviceId, etDeviceName.getText().toString().trim());
                 viewModel.saveDevice(newDevice);
 
-                Toast.makeText(getContext(), "Konfiguracja zapisana!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.toast_config_saved), Toast.LENGTH_SHORT).show();
 
                 // Zamykamy port i zatrzymujemy serwis
                 if (usbService != null) {
@@ -172,7 +172,7 @@ public class DeviceSetupFragment extends Fragment implements UsbSerialService.Co
                 
             } else if (line.startsWith("STATUS:ERROR")) {
                 loadingOverlay.setVisibility(View.GONE);
-                Toast.makeText(getContext(), "Błąd zapisu na urządzeniu!", Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), getString(R.string.toast_error_device_save), Toast.LENGTH_LONG).show();
             }
         });
     }

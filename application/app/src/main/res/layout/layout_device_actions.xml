@@ -17,7 +17,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Zarządzaj urządzeniem"
+        android:text="@string/device_actions_title"
         android:textColor="@color/text_main"
         android:textSize="20sp"
         android:textStyle="bold" />
@@ -27,7 +27,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="Zmień nazwę lub usuń bramkę z listy"
+        android:text="@string/device_actions_desc"
         android:textColor="@color/text_muted"
         android:textSize="14sp" />
 
@@ -37,7 +37,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:hint="Nazwa urządzenia"
+        android:hint="@string/device_actions_hint"
         app:expandedHintEnabled="false">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -53,7 +53,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginTop="24dp"
-        android:text="ZAPISZ ZMIANY"
+        android:text="@string/device_actions_btn_save"
         android:textColor="@color/white_bg"
         app:backgroundTint="@color/black_main"
         app:cornerRadius="12dp" />
@@ -64,7 +64,7 @@
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_marginTop="8dp"
-        android:text="USUŃ URZĄDZENIE"
+        android:text="@string/device_actions_btn_delete"
         android:textColor="@color/accent_red"
         app:cornerRadius="12dp" />
 

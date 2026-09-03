@@ -153,7 +153,8 @@ public class DeviceDetailsFragment extends Fragment {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() -> {
                                 progressBar.setVisibility(View.GONE);
-                                chatAdapter.addMessage(new ChatMessage("Błąd AI: " + error, ChatMessage.Type.AI));
+                                String errorMsg = getString(R.string.ai_error_prefix, error);
+                                chatAdapter.addMessage(new ChatMessage(errorMsg, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
                             });
                         }
