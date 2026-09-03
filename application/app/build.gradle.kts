@@ -24,7 +24,23 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            // Disabling splits to prevent "failed to add asset path" issues during deployment
+        }
     }
+
+    bundle {
+        language {
+            enableSplit = false
+        }
+        density {
+            enableSplit = false
+        }
+        abi {
+            enableSplit = false
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -34,6 +50,9 @@ android {
         resources {
             excludes += "/META-INF/INDEX.LIST"
             excludes += "/META-INF/io.netty.versions.properties"
+        }
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 }

@@ -73,6 +73,11 @@ public class ConnectionFragment extends Fragment {
         });
 
         view.findViewById(R.id.btnSkipToDashboard).setOnClickListener(v -> {
+            requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("is_configured", true)
+                    .apply();
+            
             Navigation.findNavController(view).navigate(R.id.action_connectionFragment_to_dashboardFragment);
         });
     }
