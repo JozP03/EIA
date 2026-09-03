@@ -160,7 +160,7 @@ public class DashboardViewModel extends AndroidViewModel {
                         firstInMessage = false;
                     }
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, physicalId, timestamp);
+                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, physicalId, timestamp, false);
                 }
             }
         } catch (Exception e) {
@@ -203,7 +203,7 @@ public class DashboardViewModel extends AndroidViewModel {
                     String logicSensorId = sensorId + "_" + prefix;
                     boolean isPrimary = !firstFound;
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, System.currentTimeMillis());
+                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, System.currentTimeMillis(), true);
                     firstFound = true;
                 }
             }
@@ -306,7 +306,7 @@ public class DashboardViewModel extends AndroidViewModel {
         return response;
     }
 
-    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, long timestamp) {
+    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, long timestamp, boolean isLive) {
         boolean found = false;
         for (Sensor s : sensors) {
             if (s.getId().equals(id)) {
@@ -315,7 +315,11 @@ public class DashboardViewModel extends AndroidViewModel {
                 s.setPrefix(prefix);
                 s.setPrimary(isPrimary);
                 s.setPhysicalId(physicalId);
-                s.setHasError(false);
+
+                if (isLive) {
+                    s.setHasError(false);
+                }
+
                 found = true;
                 break;
             }
