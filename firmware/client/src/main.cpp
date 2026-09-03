@@ -5,8 +5,10 @@
 #include <BLEAdvertising.h>
 #include <BLEDevice.h>
 #include <BLEUtils.h>
+#include <BLEScan.h>
 #include <WiFi.h>
 #include <Wire.h>
+#include <Preferences.h>
 
 #define LED_PIN 8
 #define I2C_SDA 2
@@ -14,6 +16,7 @@
 
 Adafruit_BMP280 bmp;
 Adafruit_AHTX0 aht;
+Preferences preferences;
 
 // flagi czunika
 bool hasBMP = false;
@@ -40,11 +43,13 @@ SensorDevice mySensors[2] = {
 const int numSensors = sizeof(mySensors) / sizeof(mySensors[0]);
 
 BLEAdvertising *pAdvertising;
+BLEScan *pBLEScan;
+
 float mockTemperature = 22.0;
 
 String uniqueSensorName = "";
 unsigned long lastSendTime = 0;
-const unsigned long sendInterval = 5 * 60000; // 5 minut w milisekundach
+unsigned long sendInterval = 60000; // domyślnie 1 min (60000 ms)
 const char *Defunit = "°C";
 
 bool checkI2C(uint8_t address) {
@@ -58,10 +63,40 @@ void setId() {
   uniqueSensorName = "ESP_" + mac.substring(mac.length() - 4);
 }
 
+class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice advertisedDevice) {
+        if (advertisedDevice.haveManufacturerData()) {
+            std::string strManufacturerData = advertisedDevice.getManufacturerData();
+            const char* dataPtr = strManufacturerData.c_str();
+
+            String searchString = uniqueSensorName + ";Interval:";
+            
+            if (strncmp(dataPtr, searchString.c_str(), searchString.length()) == 0) {
+                int newIntervalSec = String(dataPtr + searchString.length()).toInt();
+                
+                if (newIntervalSec > 0) {
+                    sendInterval = newIntervalSec * 1000UL;
+                    
+                    preferences.begin("config", false);
+                    preferences.putULong("interval", sendInterval);
+                    preferences.end();
+                    
+                    Serial.printf("\n[BLE COMMAND] Zmieniono interwal na: %d sekund!\n", newIntervalSec);
+                }
+            }
+        }
+    }
+};
+
 void setup() {
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);
   setId();
+
+  preferences.begin("config", true);
+  sendInterval = preferences.getULong("interval", 60000);
+  preferences.end();
+  Serial.printf("Aktualny interwal wysylania: %lu ms\n", sendInterval);
 
   Wire.begin(I2C_SDA, I2C_SCL);
 
@@ -80,10 +115,16 @@ void setup() {
   }
 
   BLEDevice::init("");
+  
   pAdvertising = BLEDevice::getAdvertising();
-
   pAdvertising->setScanResponse(true);
   pAdvertising->start();
+
+  pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true); 
+  pBLEScan->setInterval(100);
+  pBLEScan->setWindow(99); 
 }
 
 void loop() {
@@ -141,5 +182,8 @@ void loop() {
     Serial.println("Rozgłoszono: " + payload);
   }
 
+  pBLEScan->start(1, false); 
+  pBLEScan->clearResults();
+  
   delay(10);
 }
