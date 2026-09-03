@@ -1,25 +1,86 @@
 <resources>
-    <string name="app_name">EIA</string>
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="back_button_description">Wstecz</string>
-    <string name="help_icon_description">Pomoc</string>
-    <string name="wifi_icon_description">Ikona Wi-Fi</string>
-    <string name="lock_icon_description">Zabezpieczona sieć</string>
-    <string name="arrow_right_description">Wybierz</string>
-    <string name="usb_icon_description">Urządzenie USB</string>
-    <string name="info_icon_description">Informacja</string>
-    <!-- Preference Titles -->
+    <string name="app_name">EIA.AI</string>
+
+    <!-- Navigation Descriptions -->
+    <string name="back_button_description">Back</string>
+    <string name="info_icon_description">Information</string>
+    <string name="menu_button_description">Menu</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Your Devices</string>
+    <string name="dashboard_subtitle">Manage and monitor your active sensor network nodes</string>
+    <string name="empty_device_list">No devices added</string>
+    <string name="status_online">ONLINE</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="no_sensors_connected">No connected sensors</string>
+    <string name="sensor_error">No data</string>
+
+    <!-- Device Details -->
+    <string name="details_title">Device Details</string>
+    <string name="empty_sensor_list">No sensors connected to this gateway</string>
+    <string name="sensor_name_temp">Temperature</string>
+    <string name="sensor_name_hum">Humidity</string>
+    <string name="sensor_name_pres">Pressure</string>
+    <string name="sensor_name_lux">Brightness</string>
+    <string name="sensor_name_volt">Voltage</string>
+
+    <!-- AI Chat -->
+    <string name="ai_asistent_title">EIA.AI Assistant</string>
+    <string name="ai_hint">Ask a question...</string>
+    <string name="ai_loading">AI is thinking...</string>
+    <string name="btn_nav_about">About the app</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="mqtt_section">MQTT CONFIGURATION</string>
+    <string name="settings_mqtt_host_hint">Broker Address</string>
+    <string name="settings_mqtt_user_hint">User</string>
+    <string name="settings_mqtt_pass_hint">Password</string>
+    <string name="ai_section">AI CONFIGURATION (OPTIONAL)</string>
+    <string name="settings_ai_provider_hint">AI Provider</string>
+    <string name="settings_ai_base_url_hint">API Endpoint Address</string>
+    <string name="settings_ai_api_key_hint">AI API Key</string>
+    <string name="btn_save_settings">Save Settings</string>
+    <string name="btn_reset_factory">Reset to Factory Defaults</string>
+
+    <!-- About -->
+    <string name="about_version_format">Version Beta %1$s</string>
+    <string name="about_description">EIA.AI is an intelligent system for monitoring and managing sensor networks, designed as part of an engineering project.</string>
+    <string name="about_authors_label">Authors</string>
+    <string name="about_authors_list">None</string>
+    <string name="about_copyright">© 2026 EIA Project.</string>
+
+    <!-- Dialogs and Toasts -->
+    <string name="dialog_reset_title">Reset Configuration</string>
+    <string name="dialog_reset_message">Are you sure you want to remove all settings and devices?</string>
+    <string name="dialog_reset_yes">Yes</string>
+    <string name="dialog_reset_cancel">Cancel</string>
+    <string name="toast_settings_saved">Settings saved</string>
+    <string name="toast_name_empty">Name cannot be empty!</string>
+    <string name="dialog_delete_device_title">Delete device</string>
+    <string name="dialog_delete_device_message">Are you sure you want to delete %1$s?</string>
+    <string name="dialog_delete_device_confirm">Delete</string>
+
+    <!-- Error Messages -->
+    <string name="error_mqtt_host_required">MQTT broker address is required</string>
+    <string name="error_mqtt_user_required">MQTT user is required</string>
+    <string name="error_mqtt_pass_required">MQTT password is required</string>
+
+    <!-- Formatting -->
+    <string name="gateway_default_name">Gateway %1$s</string>
+
+    <!-- Legacy / System Descriptions -->
+    <string name="usb_icon_description">USB Device</string>
+    <string name="help_icon_description">Help</string>
+    <string name="wifi_icon_description">Wi-Fi Icon</string>
+    <string name="lock_icon_description">Secured Network</string>
+    <string name="arrow_right_description">Select</string>
     <string name="messages_header">Messages</string>
     <string name="sync_header">Sync</string>
-
-    <!-- Messages Preferences -->
     <string name="signature_title">Your signature</string>
     <string name="reply_title">Default reply action</string>
-
-    <!-- Sync Preferences -->
     <string name="sync_title">Sync email periodically</string>
     <string name="attachment_title">Download incoming attachments</string>
-    <string name="attachment_summary_on">Automatically download attachments for incoming emails
-    </string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails</string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
 </resources>

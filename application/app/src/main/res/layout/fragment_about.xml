@@ -35,7 +35,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_weight="1"
-                android:text="O aplikacji"
+                android:text="@string/btn_nav_about"
                 android:textColor="@color/text_main"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -76,7 +76,7 @@
                 android:id="@+id/tvVersion"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Wersja Beta 1.0.0"
+                android:text="@string/about_version_format"
                 android:textColor="@color/text_muted"
                 android:textSize="14sp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -90,7 +90,7 @@
                 android:layout_marginTop="32dp"
                 android:gravity="center"
                 android:lineSpacingExtra="4dp"
-                android:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+                android:text="@string/about_description"
                 android:textColor="@color/text_main"
                 android:textSize="16sp"
                 app:layout_constraintTop_toBottomOf="@id/tvVersion" />
@@ -109,7 +109,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Autorzy"
+                android:text="@string/about_authors_label"
                 android:textColor="@color/black_main"
                 android:textStyle="bold"
                 app:layout_constraintStart_toStartOf="parent"
@@ -120,7 +120,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Brak"
+                android:text="@string/about_authors_list"
                 android:textColor="@color/text_main"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tvAuthorLabel" />
@@ -129,7 +129,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:text="© 2026 EIA Project."
+                android:text="@string/about_copyright"
                 android:textColor="@color/text_muted"
                 android:textSize="12sp"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -171,7 +171,7 @@
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:paddingHorizontal="12dp"
-                android:text="O aplikacji"
+                android:text="@string/btn_nav_about"
                 android:textColor="@color/text_main"
                 android:textSize="14sp" />
         </LinearLayout>

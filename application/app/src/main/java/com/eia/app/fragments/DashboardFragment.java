@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -229,19 +230,19 @@ public class DashboardFragment extends Fragment {
                 viewModel.saveDevice(device);
                 bottomSheet.dismiss();
             } else {
-                Toast.makeText(getContext(), "Nazwa nie może być pusta!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.toast_name_empty), Toast.LENGTH_SHORT).show();
             }
         });
 
         view.findViewById(R.id.btnDeleteDevice).setOnClickListener(v -> {
-            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Usuń urządzenie")
-                    .setMessage("Czy na pewno chcesz usunąć " + device.getName() + "?")
-                    .setPositiveButton("Usuń", (dialog, which) -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(getString(R.string.dialog_delete_device_title))
+                    .setMessage(getString(R.string.dialog_delete_device_message, device.getName()))
+                    .setPositiveButton(getString(R.string.dialog_delete_device_confirm), (dialog, which) -> {
                         viewModel.deleteDevice(device.getId());
                         bottomSheet.dismiss();
                     })
-                    .setNegativeButton("Anuluj", null)
+                    .setNegativeButton(getString(R.string.dialog_reset_cancel), null)
                     .show();
         });
 

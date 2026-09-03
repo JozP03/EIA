@@ -10,6 +10,7 @@ import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
+import com.eia.app.R;
 import com.eia.app.models.Device;
 import com.eia.app.models.MqttEvent;
 import com.eia.app.models.Sensor;
@@ -92,7 +93,8 @@ public class DashboardViewModel extends AndroidViewModel {
             //jeśli urządzenia nie ma na liście
             if (!deviceFound && currentList.size() < 5) {
                 Log.d(TAG, "new device: " + event.getDeviceId());
-                Device newDevice = new Device(event.getDeviceId(), "Bramka " + event.getDeviceId());
+                String defaultName = getApplication().getString(R.string.gateway_default_name, event.getDeviceId());
+                Device newDevice = new Device(event.getDeviceId(), defaultName);
                 
                 if (event.getType() == MqttEvent.Type.STATUS) {
                     boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
@@ -334,7 +336,20 @@ public class DashboardViewModel extends AndroidViewModel {
                 }
             }
 
-            String name = (existingName != null) ? existingName : physicalId;
+            String name;
+            if (existingName != null) {
+                name = existingName;
+            } else {
+                // Jeśli nie ma nazwy, używamy nazwy przyjaznej dla prefixu lub ID
+                switch (prefix) {
+                    case "T": name = getApplication().getString(R.string.sensor_name_temp); break;
+                    case "H": name = getApplication().getString(R.string.sensor_name_hum); break;
+                    case "P": name = getApplication().getString(R.string.sensor_name_pres); break;
+                    case "L": name = getApplication().getString(R.string.sensor_name_lux); break;
+                    case "V": name = getApplication().getString(R.string.sensor_name_volt); break;
+                    default: name = physicalId; break;
+                }
+            }
             sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary, physicalId));
         }
 
@@ -366,7 +381,8 @@ public class DashboardViewModel extends AndroidViewModel {
             }
         }
         if (!anyFound && hasError) {
-            sensors.add(new Sensor(baseSensorId, baseSensorId, "---", 0, true, "", true, baseSensorId));
+            String errorName = getApplication().getString(R.string.sensor_error);
+            sensors.add(new Sensor(baseSensorId, errorName, "---", 0, true, "", true, baseSensorId));
         }
     }
   public void loadDevices() {

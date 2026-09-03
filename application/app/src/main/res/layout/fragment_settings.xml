@@ -35,7 +35,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_weight="1"
-                android:text="Ustawienia"
+                android:text="@string/settings_title"
                 android:textColor="@color/text_main"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -56,7 +56,7 @@
                     android:id="@+id/tvSettingsTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Konfiguracja"
+                    android:text="@string/settings_title"
                     android:textColor="@color/black_main"
                     android:textSize="28sp"
                     android:textStyle="bold"
@@ -69,7 +69,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="32dp"
                     android:letterSpacing="0.1"
-                    android:text="KONFIGURACJA MQTT"
+                    android:text="@string/mqtt_section"
                     android:textColor="@color/accent_blue"
                     android:textSize="12sp"
                     android:textStyle="bold"
@@ -91,7 +91,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
-                    android:hint="Adres Brokera"
+                    android:hint="@string/settings_mqtt_host_hint"
                     app:expandedHintEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/mqttDivider">
 
@@ -108,7 +108,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="User"
+                    android:hint="@string/settings_mqtt_user_hint"
                     app:expandedHintEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/tilMqttHost">
 
@@ -125,7 +125,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Hasło"
+                    android:hint="@string/settings_mqtt_pass_hint"
                     app:expandedHintEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/tilMqttTopic"
                     app:passwordToggleEnabled="true">
@@ -143,7 +143,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="32dp"
                     android:letterSpacing="0.1"
-                    android:text="KONFIGURACJA AI (OPCJONALNIE)"
+                    android:text="@string/ai_section"
                     android:textColor="@color/accent_blue"
                     android:textSize="12sp"
                     android:textStyle="bold"
@@ -165,7 +165,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
-                    android:hint="Dostawca AI"
+                    android:hint="@string/settings_ai_provider_hint"
                     app:expandedHintEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/aiDivider">
 
@@ -183,7 +183,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Adres Endpointu API"
+                    android:hint="@string/settings_ai_base_url_hint"
                     app:expandedHintEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/tilAiProvider">
 
@@ -200,7 +200,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:hint="Klucz API AI"
+                    android:hint="@string/settings_ai_api_key_hint"
                     app:expandedHintEnabled="false"
                     app:layout_constraintTop_toBottomOf="@id/tilAiBaseUrl"
                     app:passwordToggleEnabled="true">
@@ -217,7 +217,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:layout_marginTop="16dp"
-                    android:text="Zapisz ustawienia"
+                    android:text="@string/btn_save_settings"
                     android:textColor="@color/white_bg"
                     app:backgroundTint="@color/black_main"
                     app:cornerRadius="12dp"
@@ -229,7 +229,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    android:text="Resetuj do fabrycznych"
+                    android:text="@string/btn_reset_factory"
                     android:textColor="@color/accent_red"
                     android:textSize="12sp"
                     app:layout_constraintEnd_toEndOf="parent"
@@ -272,7 +272,7 @@
                 android:focusable="true"
                 android:gravity="center_vertical"
                 android:paddingHorizontal="12dp"
-                android:text="O aplikacji"
+                android:text="@string/btn_nav_about"
                 android:textColor="@color/text_main"
                 android:textSize="14sp" />
         </LinearLayout>

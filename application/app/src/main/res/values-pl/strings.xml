@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">EIA.AI</string>
+
+    <!-- Navigation Descriptions -->
+    <string name="back_button_description">Wstecz</string>
+    <string name="info_icon_description">Informacja</string>
+    <string name="menu_button_description">Menu</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Twoje Urządzenia</string>
+    <string name="dashboard_subtitle">Zarządzaj i monitoruj aktywne węzły sieci sensorowej</string>
+    <string name="empty_device_list">Brak dodanych urządzeń</string>
+    <string name="status_online">ONLINE</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="no_sensors_connected">Brak podłączonych sensorów</string>
+    <string name="sensor_error">Brak danych</string>
+
+    <!-- Device Details -->
+    <string name="details_title">Szczegóły urządzenia</string>
+    <string name="empty_sensor_list">Brak sensorów podłączonych do tej bramki</string>
+    <string name="sensor_name_temp">Temperatura</string>
+    <string name="sensor_name_hum">Wilgotność</string>
+    <string name="sensor_name_pres">Ciśnienie</string>
+    <string name="sensor_name_lux">Jasność</string>
+    <string name="sensor_name_volt">Napięcie</string>
+
+    <!-- AI Chat -->
+    <string name="ai_asistent_title">Asystent EIA.AI</string>
+    <string name="ai_hint">Zadaj pytanie…</string>
+    <string name="ai_loading">AI myśli…</string>
+    <string name="btn_nav_about">O aplikacji</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ustawienia</string>
+    <string name="mqtt_section">KONFIGURACJA MQTT</string>
+    <string name="settings_mqtt_host_hint">Adres Brokera</string>
+    <string name="settings_mqtt_user_hint">Użytkownik</string>
+    <string name="settings_mqtt_pass_hint">Hasło</string>
+    <string name="ai_section">KONFIGURACJA AI (OPCJONALNIE)</string>
+    <string name="settings_ai_provider_hint">Dostawca AI</string>
+    <string name="settings_ai_base_url_hint">Adres Endpointu API</string>
+    <string name="settings_ai_api_key_hint">Klucz API AI</string>
+    <string name="btn_save_settings">Zapisz ustawienia</string>
+    <string name="btn_reset_factory">Resetuj do fabrycznych</string>
+
+    <!-- About -->
+    <string name="about_version_format">Wersja Beta %1$s</string>
+    <string name="about_description">EIA.AI to inteligentny system monitorowania i zarządzania sieciami sensorowymi, zaprojektowany w ramach projektu inżynierskiego.</string>
+    <string name="about_authors_label">Autorzy</string>
+    <string name="about_authors_list">Brak</string>
+    <string name="about_copyright">© 2026 Projekt EIA.</string>
+
+    <!-- Dialogs and Toasts -->
+    <string name="dialog_reset_title">Resetowanie konfiguracji</string>
+    <string name="dialog_reset_message">Czy na pewno chcesz usunąć wszystkie ustawienia i urządzenia?</string>
+    <string name="dialog_reset_yes">Tak</string>
+    <string name="dialog_reset_cancel">Anuluj</string>
+    <string name="toast_settings_saved">Ustawienia zapisane</string>
+    <string name="toast_name_empty">Nazwa nie może być pusta!</string>
+    <string name="dialog_delete_device_title">Usuń urządzenie</string>
+    <string name="dialog_delete_device_message">Czy na pewno chcesz usunąć %1$s?</string>
+    <string name="dialog_delete_device_confirm">Usuń</string>
+
+    <!-- Error Messages -->
+    <string name="error_mqtt_host_required">Adres brokera MQTT jest wymagany</string>
+    <string name="error_mqtt_user_required">Użytkownik MQTT jest wymagany</string>
+    <string name="error_mqtt_pass_required">Hasło MQTT jest wymagane</string>
+
+    <!-- Formatting -->
+    <string name="gateway_default_name">Bramka %1$s</string>
+
+    <!-- Legacy / System Descriptions -->
+    <string name="usb_icon_description">Urządzenie USB</string>
+    <string name="help_icon_description">Pomoc</string>
+    <string name="wifi_icon_description">Ikona Wi-Fi</string>
+    <string name="lock_icon_description">Zabezpieczona sieć</string>
+    <string name="arrow_right_description">Wybierz</string>
+    <string name="messages_header">Wiadomości</string>
+    <string name="sync_header">Synchronizacja</string>
+    <string name="signature_title">Twój podpis</string>
+    <string name="reply_title">Domyślna akcja odpowiedzi</string>
+    <string name="sync_title">Synchronizuj e-mail okresowo</string>
+    <string name="attachment_title">Pobieraj załączniki przychodzące</string>
+    <string name="attachment_summary_on">Automatycznie pobieraj załączniki dla przychodzących e-maili</string>
+    <string name="attachment_summary_off">Pobieraj załączniki tylko na żądanie</string>
+</resources>

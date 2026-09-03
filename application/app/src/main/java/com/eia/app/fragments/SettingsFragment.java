@@ -1,5 +1,6 @@
 package com.eia.app.fragments;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -11,6 +12,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.Navigation;
 
 import com.eia.app.R;
 import com.eia.app.repositories.MqttRepository;
@@ -80,28 +83,28 @@ public class SettingsFragment extends Fragment {
 
         //przycisk reset
         view.findViewById(R.id.btnReset).setOnClickListener(v -> {
-            new android.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Resetowanie konfiguracji")
-                    .setMessage("Czy na pewno chcesz usunąć wszystkie ustawienia i urządzenia?")
-                    .setPositiveButton("Tak", (dialog, which) -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(getString(R.string.dialog_reset_title))
+                    .setMessage(getString(R.string.dialog_reset_message))
+                    .setPositiveButton(getString(R.string.dialog_reset_yes), (dialog, which) -> {
                         // 1. Czyszczenie ustawień ogólnych i AI
-                        requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE)
+                        requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE)
                                 .edit()
                                 .clear()
                                 .apply();
 
                         // 2. Czyszczenie listy urządzeń (bramek) przez ViewModel
-                        DashboardViewModel dashboardViewModel = new androidx.lifecycle.ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
+                        DashboardViewModel dashboardViewModel = new ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
                         dashboardViewModel.clearAllDevices();
 
                         // 3. Rozłączanie MQTT
                         mqtt.disconnectFromBroker();
 
                         // 4. Powrót do ekranu początkowego
-                        androidx.navigation.Navigation.findNavController(view)
+                        Navigation.findNavController(view)
                                 .navigate(R.id.connectionFragment);
                     })
-                    .setNegativeButton("Anuluj", null)
+                    .setNegativeButton(getString(R.string.dialog_reset_cancel), null)
                     .show();
         });
 
@@ -180,17 +183,17 @@ public class SettingsFragment extends Fragment {
         boolean hasError = false;
 
         if (host.isEmpty()) {
-            etMqttHost.setError("Adres brokera MQTT jest wymagany");
+            etMqttHost.setError(getString(R.string.error_mqtt_host_required));
             hasError = true;
         }
 
         if (user.isEmpty()) {
-            etMqttUser.setError("Użytkownik MQTT jest wymagany");
+            etMqttUser.setError(getString(R.string.error_mqtt_user_required));
             hasError = true;
         }
 
         if (pass.isEmpty()) {
-            etMqttPassword.setError("Hasło MQTT jest wymagane");
+            etMqttPassword.setError(getString(R.string.error_mqtt_pass_required));
             hasError = true;
         }
 
@@ -211,6 +214,6 @@ public class SettingsFragment extends Fragment {
         mqtt.configure(host, user, pass);
         mqtt.connectToBroker();
 
-        Toast.makeText(getContext(), "Ustawienia zapisane", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), getString(R.string.toast_settings_saved), Toast.LENGTH_SHORT).show();
     }
 }

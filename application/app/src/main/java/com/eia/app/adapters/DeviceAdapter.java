@@ -50,11 +50,11 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
 
         // Obsługa statusu
         if (device.isOnline()) {
-            holder.tvStatus.setText("ONLINE");
+            holder.tvStatus.setText(holder.itemView.getContext().getString(R.string.status_online));
             holder.tvStatus.setTextColor(holder.itemView.getContext().getColor(R.color.accent_green));
             holder.tvStatusIco.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_green));
         } else {
-            holder.tvStatus.setText("OFFLINE");
+            holder.tvStatus.setText(holder.itemView.getContext().getString(R.string.status_offline));
             holder.tvStatus.setTextColor(holder.itemView.getContext().getColor(R.color.text_muted));
             holder.tvStatusIco.setBackgroundColor(holder.itemView.getContext().getColor(R.color.text_muted));
         }
@@ -94,7 +94,7 @@ public class DeviceAdapter extends ListAdapter<Device, DeviceAdapter.ViewHolder>
 
         if (!hasSensors) {
             TextView tvNoSensors = new TextView(holder.itemView.getContext());
-            tvNoSensors.setText("Brak podłączonych sensorów");
+            tvNoSensors.setText(holder.itemView.getContext().getString(R.string.no_sensors_connected));
             tvNoSensors.setTextSize(12);
             tvNoSensors.setTextColor(holder.itemView.getContext().getColor(R.color.text_muted));
             tvNoSensors.setPadding(0, 8, 0, 0);
