@@ -6,13 +6,16 @@ import android.os.Bundle;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
+import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.navigation.NavController;
 import androidx.navigation.NavGraph;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.eia.app.repositories.MqttRepository;
+import com.google.android.material.navigation.NavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -53,6 +56,49 @@ public class MainActivity extends AppCompatActivity {
             }
 
             navController.setGraph(navGraph);
+
+            setupNavigation(navController);
+        }
+    }
+
+    private void setupNavigation(NavController navController) {
+        DrawerLayout drawer = findViewById(R.id.main_drawer_layout);
+        NavigationView navigationView = findViewById(R.id.nav_view);
+
+        // Automatyczna obsługa menu (Dashboard, Settings)
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.dashboardFragment) {
+                navController.navigate(R.id.dashboardFragment);
+            } else if (id == R.id.settingsFragment) {
+                navController.navigate(R.id.settingsFragment);
+            }
+            drawer.closeDrawers();
+            return true;
+        });
+
+        // Obsługa przycisku "O aplikacji" na dole menu
+        findViewById(R.id.btnNavAbout).setOnClickListener(v -> {
+            navController.navigate(R.id.aboutFragment);
+            drawer.closeDrawers();
+        });
+
+        // Blokowanie menu na ekranach konfiguracji
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            int id = destination.getId();
+            if (id == R.id.connectionFragment || id == R.id.scanFragment || 
+                id == R.id.configFragment || id == R.id.deviceSetupFragment) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
+            } else {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED);
+            }
+        });
+    }
+
+    public void openDrawer() {
+        DrawerLayout drawer = findViewById(R.id.main_drawer_layout);
+        if (drawer != null) {
+            drawer.openDrawer(GravityCompat.START);
         }
     }
 }

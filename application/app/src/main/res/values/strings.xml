@@ -77,6 +77,10 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="language_section">APP LANGUAGE</string>
+    <string name="settings_language_hint">Choose Language</string>
+    <string name="language_en">English</string>
+    <string name="language_pl">Polish (Polski)</string>
     <string name="mqtt_section">MQTT CONFIGURATION</string>
     <string name="settings_mqtt_host_hint">Broker Address</string>
     <string name="settings_mqtt_user_hint">User</string>

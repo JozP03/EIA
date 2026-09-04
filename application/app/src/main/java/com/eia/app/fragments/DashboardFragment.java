@@ -1,5 +1,7 @@
 package com.eia.app.fragments;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import java.util.ArrayList;
@@ -14,6 +16,8 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.NavigationUI;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,6 +26,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.eia.app.MainActivity;
 import com.eia.app.R;
 import com.eia.app.adapters.DeviceAdapter;
 import com.eia.app.adapters.ChatAdapter;
@@ -66,23 +71,8 @@ public class DashboardFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.dashboard_nav_view);
         NavController navController = Navigation.findNavController(view);
         
-        navigationView.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
-            
-            if (id == R.id.settingsFragment) {
-                navController.navigate(R.id.settingsFragment);
-            }
-            
-            if (drawer != null) {
-                drawer.closeDrawers();
-            }
-            return true;
-        });
-
         // przycisk +
         view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
             navController.navigate(R.id.action_dashboardFragment_to_connectionFragment);
@@ -90,28 +80,15 @@ public class DashboardFragment extends Fragment {
 
         //panel boczny
         view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
-            if (drawer != null) {
-                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).openDrawer();
             }
         });
 
-        // przysk o aplikacji
-        View navAbout = view.findViewById(R.id.btnNavAbout);
-        if (navAbout != null) {
-            navAbout.setOnClickListener(v -> {
-                androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
-                if (drawer != null) {
-                    drawer.closeDrawers();
-                }
-                navController.navigate(R.id.aboutFragment);
-            });
-        }
-
-        androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvDeviceList);
+        RecyclerView rv = view.findViewById(R.id.rvDeviceList);
         TextView tvEmpty = view.findViewById(R.id.tvEmptyList);
 
-        com.eia.app.adapters.DeviceAdapter adapter = new com.eia.app.adapters.DeviceAdapter(device -> {
+        DeviceAdapter adapter = new DeviceAdapter(device -> {
             // przejście do szczegółów urządzenia
             Bundle args = new Bundle();
             args.putString("deviceId", device.getId());
@@ -120,7 +97,7 @@ public class DashboardFragment extends Fragment {
             showDeviceActions(device);
         });
 
-        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
+        rv.setLayoutManager(new LinearLayoutManager(getContext()));
         rv.setAdapter(adapter);
 
         viewModel.getDevices().observe(getViewLifecycleOwner(), newDevices -> {
@@ -141,7 +118,7 @@ public class DashboardFragment extends Fragment {
 
         // Obsługa dymka AI
         View fabAi = view.findViewById(R.id.fabAiChat);
-        android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE);
+        SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);
         String aiKey = prefs.getString("ai_api_key", "");
         
         Log.d("DashboardFragment", "Klucz AI: [" + aiKey + "]");

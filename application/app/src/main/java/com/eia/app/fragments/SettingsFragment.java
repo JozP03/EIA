@@ -7,26 +7,36 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.os.LocaleListCompat;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
+import com.eia.app.MainActivity;
 import com.eia.app.R;
 import com.eia.app.repositories.MqttRepository;
 import com.eia.app.viewModels.DashboardViewModel;
+import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.util.Locale;
 import java.util.Objects;
 
 public class SettingsFragment extends Fragment {
 
     private TextInputEditText etMqttHost, etMqttUser, etMqttPassword;
     private TextInputEditText etAiBaseUrl, etAiApiKey;
-    private android.widget.AutoCompleteTextView actvAiProvider;
+    private AutoCompleteTextView actvAiProvider, actvLanguage;
     private MqttRepository mqtt;
     private SharedPreferences prefs;
 
@@ -43,43 +53,12 @@ public class SettingsFragment extends Fragment {
         mqtt = MqttRepository.getInstance();
         prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);
 
-        // Nawigacja boczna
-        com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.settings_nav_view);
-        androidx.navigation.NavController navController = androidx.navigation.Navigation.findNavController(view);
-        
-        navigationView.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
-            
-            if (id == R.id.dashboardFragment) {
-                navController.navigate(R.id.dashboardFragment);
-            }
-            
-            if (drawer != null) {
-                drawer.closeDrawers();
-            }
-            return true;
-        });
-
         // Otwieranie panelu bocznego
         view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
-            if (drawer != null) {
-                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).openDrawer();
             }
         });
-
-        // Obsługa kliknięcia w "O aplikacji" na dole panelu bocznego
-        View navAbout = view.findViewById(R.id.btnNavAbout);
-        if (navAbout != null) {
-            navAbout.setOnClickListener(v -> {
-                androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
-                if (drawer != null) {
-                    drawer.closeDrawers();
-                }
-                navController.navigate(R.id.aboutFragment);
-            });
-        }
 
         //przycisk reset
         view.findViewById(R.id.btnReset).setOnClickListener(v -> {
@@ -116,16 +95,47 @@ public class SettingsFragment extends Fragment {
         etAiBaseUrl = view.findViewById(R.id.etAiBaseUrl);
         etAiApiKey = view.findViewById(R.id.etAiApiKey);
         actvAiProvider = view.findViewById(R.id.actvAiProvider);
+        actvLanguage = view.findViewById(R.id.actvLanguage);
 
         setupAiProviderSpinner();
+        setupLanguageSpinner();
         loadSettings();
 
         view.findViewById(R.id.btnSaveSettings).setOnClickListener(v -> saveSettings());
     }
 
+    private void setupLanguageSpinner() {
+        String[] languages = {getString(R.string.language_en), getString(R.string.language_pl)};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                languages
+        );
+        actvLanguage.setAdapter(adapter);
+
+        // ustawienie jezyka
+        LocaleListCompat currentLocales = AppCompatDelegate.getApplicationLocales();
+        String currentLang = currentLocales.isEmpty() ? Locale.getDefault().getLanguage() : currentLocales.get(0).getLanguage();
+        
+        if ("pl".equals(currentLang)) {
+            actvLanguage.setText(getString(R.string.language_pl), false);
+        } else {
+            actvLanguage.setText(getString(R.string.language_en), false);
+        }
+
+        actvLanguage.setOnItemClickListener((parent, v, position, id) -> {
+            String selected = (String) parent.getItemAtPosition(position);
+            String langCode = selected.equals(getString(R.string.language_pl)) ? "pl" : "en";
+            
+            AppCompatDelegate.setApplicationLocales(
+                    LocaleListCompat.forLanguageTags(langCode)
+            );
+        });
+    }
+
     private void setupAiProviderSpinner() {
         String[] providers = {"OpenAI API (ChatGPT)", "KoboldCPP", "Ollama", "LLMStudio", "Gemini API"};
-        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
                 android.R.layout.simple_dropdown_item_1line,
                 providers

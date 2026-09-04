@@ -77,6 +77,10 @@
 
     <!-- Settings -->
     <string name="settings_title">Ustawienia</string>
+    <string name="language_section">JĘZYK APLIKACJI</string>
+    <string name="settings_language_hint">Wybierz język</string>
+    <string name="language_en">Angielski (English)</string>
+    <string name="language_pl">Polski</string>
     <string name="mqtt_section">KONFIGURACJA MQTT</string>
     <string name="settings_mqtt_host_hint">Adres Brokera</string>
     <string name="settings_mqtt_user_hint">Użytkownik</string>
