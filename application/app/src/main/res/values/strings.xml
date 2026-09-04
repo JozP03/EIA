@@ -73,7 +73,7 @@
     <string name="ai_hint">Ask a question...</string>
     <string name="ai_loading">AI is thinking...</string>
     <string name="ai_error_prefix">AI Error: %1$s</string>
-    <string name="btn_nav_about">About the app</string>
+    <string name="btn_nav_about">About</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

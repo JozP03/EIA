@@ -77,15 +77,25 @@ public class MainActivity extends AppCompatActivity {
             return true;
         });
 
-        // Obsługa przycisku "O aplikacji" na dole menu
+        // Obsługa przycisku "O aplikacji"
         findViewById(R.id.btnNavAbout).setOnClickListener(v -> {
             navController.navigate(R.id.aboutFragment);
             drawer.closeDrawers();
         });
 
-        // Blokowanie menu na ekranach konfiguracji
+        // Blokowanie menu
         navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
             int id = destination.getId();
+
+            if (id == R.id.dashboardFragment || id == R.id.settingsFragment) {
+                navigationView.setCheckedItem(id);
+            } else {
+                int size = navigationView.getMenu().size();
+                for (int i = 0; i < size; i++) {
+                    navigationView.getMenu().getItem(i).setChecked(false);
+                }
+            }
+
             if (id == R.id.connectionFragment || id == R.id.scanFragment || 
                 id == R.id.configFragment || id == R.id.deviceSetupFragment) {
                 drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);

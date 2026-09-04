@@ -28,11 +28,11 @@
 
             <ImageView
                 android:id="@+id/ivWifiIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_gravity="center"
                 android:contentDescription="@string/wifi_icon_description"
-                android:src="@android:drawable/ic_dialog_info"
+                android:src="@drawable/wifi_24px"
                 app:tint="@color/accent_blue" />
         </androidx.cardview.widget.CardView>
 
@@ -84,13 +84,13 @@
             android:id="@+id/ivLockIcon"
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:contentDescription="@string/lock_icon_description"
-            android:src="@android:drawable/ic_lock_idle_lock"
-            app:tint="@color/text_muted"
             android:layout_marginEnd="16dp"
+            android:contentDescription="@string/lock_icon_description"
+            android:src="@drawable/lock_24px"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/ivArrowRight"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:tint="@color/text_muted" />
 
         <ImageView
             android:id="@+id/ivArrowRight"
@@ -98,10 +98,10 @@
             android:layout_height="20dp"
             android:contentDescription="@string/arrow_right_description"
             android:src="@android:drawable/ic_media_play"
-            app:tint="@color/border_gray"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent" />
+            app:tint="@color/text_muted" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
