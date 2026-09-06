@@ -81,14 +81,15 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
             entries.add(new Entry(x, reading.getValue()));
         }
 
+        int accentGreen = chart.getContext().getColor(R.color.accent_green);
         LineDataSet dataSet = new LineDataSet(entries, unit);
-        dataSet.setColor(Color.parseColor("#22C55E")); // accent_green
+        dataSet.setColor(accentGreen);
         dataSet.setLineWidth(2f);
         dataSet.setDrawCircles(false);
         dataSet.setDrawValues(false);
         dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
         dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.parseColor("#22C55E"));
+        dataSet.setFillColor(accentGreen);
         dataSet.setFillAlpha(30);
 
         LineData lineData = new LineData(dataSet);

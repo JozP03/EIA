@@ -83,7 +83,7 @@
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/white_bg"
-            app:backgroundTint="#0F172A"
+            app:backgroundTint="@color/black_main"
             app:cornerRadius="6dp"
             app:icon="@android:drawable/stat_notify_sync"
             app:iconTint="@color/white_bg" />
@@ -131,7 +131,7 @@
                 android:layout_height="40dp"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#E0F2FE"
+                app:cardBackgroundColor="@color/accent_blue_subtle"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 

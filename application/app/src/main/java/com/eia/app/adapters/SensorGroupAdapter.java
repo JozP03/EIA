@@ -123,14 +123,15 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         for (int i = 0; i < readings.size(); i++) {
             entries.add(new Entry(i, readings.get(i).getValue()));
         }
+        int accentGreen = chart.getContext().getColor(R.color.accent_green);
         LineDataSet dataSet = new LineDataSet(entries, "");
-        dataSet.setColor(Color.parseColor("#22C55E"));
+        dataSet.setColor(accentGreen);
         dataSet.setLineWidth(2f);
         dataSet.setDrawCircles(false);
         dataSet.setDrawValues(false);
         dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
         dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.parseColor("#22C55E"));
+        dataSet.setFillColor(accentGreen);
         dataSet.setFillAlpha(20);
 
         chart.setData(new LineData(dataSet));

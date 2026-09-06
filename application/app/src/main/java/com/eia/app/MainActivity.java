@@ -5,6 +5,7 @@ import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
 import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
@@ -21,6 +22,8 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -37,9 +40,8 @@ public class MainActivity extends AppCompatActivity {
             NavController navController = navHostFragment.getNavController();
 
             NavGraph navGraph = navController.getNavInflater().inflate(R.navigation.nav_graph);
-
+            
             SharedPreferences prefs = getSharedPreferences("EIA_PREFS", MODE_PRIVATE);
-
             String mqttHost = prefs.getString("mqtt_host", "broker.hivemq.com");
             String mqttUser = prefs.getString("mqtt_user", "");
             String mqttPass = prefs.getString("mqtt_pass", "");
@@ -55,7 +57,9 @@ public class MainActivity extends AppCompatActivity {
                 navGraph.setStartDestination(R.id.connectionFragment);
             }
 
-            navController.setGraph(navGraph);
+            if (savedInstanceState == null) {
+                navController.setGraph(navGraph);
+            }
 
             setupNavigation(navController);
         }
@@ -65,7 +69,6 @@ public class MainActivity extends AppCompatActivity {
         DrawerLayout drawer = findViewById(R.id.main_drawer_layout);
         NavigationView navigationView = findViewById(R.id.nav_view);
 
-        // Automatyczna obsługa menu (Dashboard, Settings)
         navigationView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.dashboardFragment) {
