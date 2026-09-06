@@ -250,7 +250,7 @@ public class DashboardViewModel extends AndroidViewModel {
         context.append("\nINSTRUKCJA ODPOWIADANIA:\n");
         context.append("- Odpowiadaj zawsze w języku, w którym napisał użytkownik.\n");
         context.append("- Odpowiadaj bardzo krótko, konkretnie i wyłącznie na temat.\n");
-        context.append("- Nie lej wody, unikaj długich wstępów i zbędnych zdań.\n");
+        context.append("- Unikaj długich wstępów i zbędnych zdań.\n");
         context.append("- Jeśli użytkownik pyta o dane, podaj je od razu.\n");
 
         context.append("\nNa podstawie powyższych danych odpowiedz na pytanie użytkownika.");
