@@ -20,7 +20,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_revert"
+            android:src="@drawable/arrow_back_24px"
             app:tint="@color/text_main" />
 
         <TextView

@@ -230,7 +230,7 @@ public class DashboardViewModel extends AndroidViewModel {
                        .append(" (Status: ").append(d.isOnline() ? "ONLINE" : "OFFLINE").append(")\n");
                 
                 if (d.getSensorList() != null) {
-                    for (com.eia.app.models.Sensor s : d.getSensorList()) {
+                    for (Sensor s : d.getSensorList()) {
                         if (s.isHasError()) {
                             context.append("  * ").append(s.getName()).append(": BŁĄD/BRAK DANYCH\n");
                         } else {
@@ -244,7 +244,7 @@ public class DashboardViewModel extends AndroidViewModel {
         context.append("\nZASADY STEROWANIA:\n");
         context.append("1. Możesz zmieniać częstotliwość raportowania czujników.\n");
         context.append("2. Aby to zrobić, dodaj na końcu odpowiedzi komendę: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
-        context.append("3. PHYSICAL_ID to identyfikator typu ESP_XXXX. SECONDS to liczba sekund (np. 300 dla 5 minut).\n");
+        context.append("3. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund (np. 300 dla 5 minut).\n");
         context.append("4. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
 
         context.append("\nINSTRUKCJA ODPOWIADANIA:\n");

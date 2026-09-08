@@ -71,8 +71,9 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         
         if (sensorsInGroup == null || sensorsInGroup.isEmpty()) return;
 
+        // Wyświetlamy nazwę czujnika. w przeciwnym razie samo ID.
         Sensor first = sensorsInGroup.get(0);
-        holder.tvTitle.setText(first.getName() + " (" + physicalId + ")");
+        holder.tvTitle.setText(first.getName());
 
         holder.measuresContainer.removeAllViews();
         for (Sensor s : sensorsInGroup) {
@@ -110,7 +111,7 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
             
             viewModel.getReadingsForSensor(sensor.getId()).observe(lifecycleOwner, readings -> {
                 if (readings != null && !readings.isEmpty()) {
-                    setupChart(chart, readings);
+                    setupChart(chart, readings, sensor.getPrefix());
                 }
             });
         }
@@ -118,11 +119,40 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         container.addView(row);
     }
 
-    private void setupChart(LineChart chart, List<SensorReading> readings) {
+    private void setupChart(LineChart chart, List<SensorReading> readings, String prefix) {
         List<Entry> entries = new ArrayList<>();
+        float dataMin = Float.MAX_VALUE;
+        float dataMax = Float.MIN_VALUE;
+
         for (int i = 0; i < readings.size(); i++) {
-            entries.add(new Entry(i, readings.get(i).getValue()));
+            float val = readings.get(i).getValue();
+            entries.add(new Entry(i, val));
+            if (val < dataMin) dataMin = val;
+            if (val > dataMax) dataMax = val;
         }
+
+        // zakresy
+        float min = 0f;
+        float max = 100f;
+
+        switch (prefix) {
+            case "T": // Temperatura 0-40
+                min = 0f; max = 40f; break;
+            case "H": // Wilgotność 0-100
+                min = 0f; max = 100f; break;
+            case "P": // Ciśnienie 950-1050
+                min = 950f; max = 1050f; break;
+            case "L": // Jasność 0-1000
+                min = 0f; max = 1000f; break;
+            case "V": // Napięcie 0-5
+                min = 0f; max = 5f; break;
+            default:
+                min = dataMin - 5f; max = dataMax + 5f;
+        }
+
+        if (dataMin < min) min = dataMin - (prefix.equals("P") ? 10f : 5f);
+        if (dataMax > max) max = dataMax + (prefix.equals("P") ? 10f : 5f);
+
         int accentGreen = chart.getContext().getColor(R.color.accent_green);
         LineDataSet dataSet = new LineDataSet(entries, "");
         dataSet.setColor(accentGreen);
@@ -135,12 +165,16 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         dataSet.setFillAlpha(20);
 
         chart.setData(new LineData(dataSet));
+        chart.getAxisLeft().setAxisMinimum(min);
+        chart.getAxisLeft().setAxisMaximum(max);
+        
         chart.getDescription().setEnabled(false);
         chart.getLegend().setEnabled(false);
         chart.getAxisRight().setEnabled(false);
         chart.getXAxis().setEnabled(false);
         chart.getAxisLeft().setDrawGridLines(false);
-        chart.getAxisLeft().setTextSize(8f);
+        chart.getAxisLeft().setTextColor(chart.getContext().getColor(R.color.text_muted));
+        chart.getAxisLeft().setTextSize(10f);
         chart.setTouchEnabled(false);
         chart.invalidate();
     }

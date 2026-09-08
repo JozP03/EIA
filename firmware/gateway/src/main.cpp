@@ -140,53 +140,48 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
     if (advertisedDevice.haveManufacturerData()) {
       std::string strManufacturerData = advertisedDevice.getManufacturerData();
-      
       const char* dataPtr = strManufacturerData.c_str();
 
-      if (strncmp(dataPtr, "ESP_", 4) == 0) { 
-        const char* semiColonIndex = strchr(dataPtr, ';');
+      if (strManufacturerData.length() >= 5 && dataPtr[4] == ';') { 
         
-        if (semiColonIndex != nullptr) {
-          Message msg;
-          memset(&msg, 0, sizeof(Message));
-          
-          int idLen = semiColonIndex - dataPtr;
-          if (idLen > 11) idLen = 11;
-          strncpy(msg.sensorId, dataPtr, idLen);
-          
-          strncpy(msg.payloadData, semiColonIndex + 1, sizeof(msg.payloadData) - 1);
+        Message msg;
+        memset(&msg, 0, sizeof(Message));
+        
+        const char* semiColonIndex = dataPtr + 4;
+        strncpy(msg.sensorId, dataPtr, 4);
+        
+        strncpy(msg.payloadData, semiColonIndex + 1, sizeof(msg.payloadData) - 1);
 
-          bool isNewData = false;
-          bool found = false;
+        bool isNewData = false;
+        bool found = false;
 
-          for (int i = 0; i < MAX_SENSORS; i++) {
-              if (strcmp(sensorRegistry[i].id, msg.sensorId) == 0) {
-                  found = true;
-                  sensorRegistry[i].lastSeen = millis(); 
-                  
-                  if (strcmp(sensorRegistry[i].lastPayload, msg.payloadData) != 0) {
-                      snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
-                      isNewData = true;
-                  }
-                  break;
-              }
-          }
+        for (int i = 0; i < MAX_SENSORS; i++) {
+            if (strcmp(sensorRegistry[i].id, msg.sensorId) == 0) {
+                found = true;
+                sensorRegistry[i].lastSeen = millis(); 
+                
+                if (strcmp(sensorRegistry[i].lastPayload, msg.payloadData) != 0) {
+                    snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
+                    isNewData = true;
+                }
+                break;
+            }
+        }
 
-          if (!found) {
-              for (int i = 0; i < MAX_SENSORS; i++) {
-                  if (sensorRegistry[i].id[0] == '\0') {
-                      snprintf(sensorRegistry[i].id, sizeof(sensorRegistry[i].id), "%s", msg.sensorId);
-                      snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
-                      sensorRegistry[i].lastSeen = millis();
-                      isNewData = true;
-                      break;
-                  }
-              }
-          }
+        if (!found) {
+            for (int i = 0; i < MAX_SENSORS; i++) {
+                if (sensorRegistry[i].id[0] == '\0') {
+                    snprintf(sensorRegistry[i].id, sizeof(sensorRegistry[i].id), "%s", msg.sensorId);
+                    snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
+                    sensorRegistry[i].lastSeen = millis();
+                    isNewData = true;
+                    break;
+                }
+            }
+        }
 
-          if (isNewData) {
-            xQueueSend(valueQueue, &msg, 0);
-          }
+        if (isNewData) {
+          xQueueSend(valueQueue, &msg, 0);
         }
       }
     }

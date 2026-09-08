@@ -60,7 +60,7 @@ bool checkI2C(uint8_t address) {
 void setId() {
   String mac = WiFi.macAddress();
   mac.replace(":", "");
-  uniqueSensorName = "ESP_" + mac.substring(mac.length() - 4);
+  uniqueSensorName = mac.substring(mac.length() - 4); 
 }
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {

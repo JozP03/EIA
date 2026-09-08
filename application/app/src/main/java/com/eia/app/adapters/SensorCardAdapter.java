@@ -99,7 +99,10 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
         chart.getLegend().setEnabled(false);
         chart.getAxisRight().setEnabled(false);
         chart.getAxisLeft().setDrawGridLines(false);
-        chart.getAxisLeft().setTextColor(Color.GRAY);
+        chart.getAxisLeft().setTextColor(chart.getContext().getColor(R.color.text_muted));
+        chart.getAxisLeft().setTextSize(10f);
+        chart.getAxisLeft().setSpaceTop(30f);
+        chart.getAxisLeft().setSpaceBottom(30f);
         chart.getXAxis().setEnabled(false);
         
         chart.setTouchEnabled(false);
