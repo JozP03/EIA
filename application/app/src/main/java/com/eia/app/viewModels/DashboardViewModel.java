@@ -242,9 +242,9 @@ public class DashboardViewModel extends AndroidViewModel {
             }
         }
         context.append("\nZASADY STEROWANIA:\n");
-        context.append("1. Możesz zmieniać częstotliwość raportowania czujników.\n");
-        context.append("2. Aby to zrobić, dodaj na końcu odpowiedzi komendę: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
-        context.append("3. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund (np. 300 dla 5 minut).\n");
+        context.append("1. Możesz zmieniać częstotliwość raportowania czujników komendą: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
+        context.append("2. Możesz zrestartować czujnik komendą: [CMD:RESET:PHYSICAL_ID].\n");
+        context.append("3. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
         context.append("4. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
 
         context.append("\nINSTRUKCJA ODPOWIADANIA:\n");
@@ -260,18 +260,19 @@ public class DashboardViewModel extends AndroidViewModel {
     public String handleAiResponseAndGetCleanText(String deviceId, String response) {
         if (response == null) return "";
 
-        if (response.contains("[CMD:SET_INTERVAL:")) {
+        if (response.contains("[CMD:")) {
             try {
                 int start = response.indexOf("[CMD:");
                 int end = response.indexOf("]", start);
                 String fullCmd = response.substring(start + 5, end);
                 String[] parts = fullCmd.split(":");
                 
-                if (parts.length >= 3) {
+                if (parts.length >= 2) {
+                    String action = parts[0];
                     String physicalId = parts[1];
-                    String seconds = parts[2];
                     String targetDeviceId = deviceId;
 
+                    // Szukanie bramki dla sensora
                     if ("global".equals(deviceId)) {
                         List<Device> currentList = devices.getValue();
                         if (currentList != null) {
@@ -290,11 +291,19 @@ public class DashboardViewModel extends AndroidViewModel {
                     }
 
                     if (!"global".equals(targetDeviceId)) {
-                        // Format: id_bramki/id_esp/config z treścią INTERVAL:sekundy
                         String topic = targetDeviceId + "/" + physicalId + "/config";
-                        String payload = "INTERVAL:" + seconds;
-                        com.eia.app.repositories.MqttRepository.getInstance().publishCommand(topic, payload);
-                        Log.d(TAG, "AI wysłało komendę MQTT: " + topic + " -> " + payload);
+                        String payload = "";
+
+                        if ("SET_INTERVAL".equals(action) && parts.length >= 3) {
+                            payload = "INTERVAL:" + parts[2];
+                        } else if ("RESET".equals(action)) {
+                            payload = "RESET";
+                        }
+
+                        if (!payload.isEmpty()) {
+                            MqttRepository.getInstance().publishCommand(topic, payload);
+                            Log.d(TAG, "AI wysłało komendę MQTT: " + topic + " -> " + payload);
+                        }
                     } else {
                         Log.w(TAG, "Nie znaleziono bramki dla sensora: " + physicalId);
                     }
