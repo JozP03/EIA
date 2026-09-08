@@ -38,7 +38,7 @@ struct SensorDevice {
 
 SensorDevice mySensors[2] = {
     {0x38, "AHT20", false, 2, {{"T", 0.0, 1}, {"H", 0.0, 0}}},
-    {0x76, "BMP280", false, 1, {{"P", 0.0, 0}}}};
+    {0x77, "BMP280", false, 1, {{"P", 0.0, 0}}}};
 
 const int numSensors = sizeof(mySensors) / sizeof(mySensors[0]);
 
@@ -106,8 +106,8 @@ void setup() {
 
       if (mySensors[i].address == 0x38) {
         mySensors[i].isActive = aht.begin(&Wire);
-      } else if (mySensors[i].address == 0x76) {
-        mySensors[i].isActive = bmp.begin(0x76);
+      } else if (mySensors[i].address == 0x77) {
+        mySensors[i].isActive = bmp.begin(0x77);
       }
     } else {
       Serial.println("Brak: " + mySensors[i].name);
@@ -140,7 +140,7 @@ void loop() {
           aht.getEvent(&humidity, &temp);
           mySensors[i].metrics[0].value = temp.temperature;
           mySensors[i].metrics[1].value = humidity.relative_humidity;
-        } else if (mySensors[i].address == 0x76) { // BMP
+        } else if (mySensors[i].address == 0x77) { // BMP
           mySensors[i].metrics[0].value = bmp.readPressure() / 100.0F;
         }
       }
