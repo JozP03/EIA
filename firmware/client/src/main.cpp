@@ -18,10 +18,6 @@ Adafruit_BMP280 bmp;
 Adafruit_AHTX0 aht;
 Preferences preferences;
 
-// flagi czunika
-bool hasBMP = false;
-bool hasAHT = false;
-
 struct Metric {
   String prefix;
   float value;
@@ -45,12 +41,10 @@ const int numSensors = sizeof(mySensors) / sizeof(mySensors[0]);
 BLEAdvertising *pAdvertising;
 BLEScan *pBLEScan;
 
-float mockTemperature = 22.0;
-
 String uniqueSensorName = "";
 unsigned long lastSendTime = 0;
 unsigned long sendInterval = 60000; // domyślnie 1 min (60000 ms)
-const char *Defunit = "°C";
+float tempOffset = 0.0;
 
 bool checkI2C(uint8_t address) {
   Wire.beginTransmission(address);
@@ -72,6 +66,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
             String intervalString = uniqueSensorName + ";Interval:";
             String resetString = uniqueSensorName + ";Reset";
             String resetString2 = uniqueSensorName + ";ResetToDefault";
+            String calibrateString = uniqueSensorName + ";Calibrate";
             
             // interwal wysyłania danych
             if (strncmp(dataPtr, intervalString.c_str(), intervalString.length()) == 0) {
@@ -101,6 +96,18 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
                 delay(500);
                 ESP.restart();
             }
+            // kalibracja temperatury
+            else if (strncmp(dataPtr, calibrateString.c_str(), calibrateString.length()) == 0) {
+                float newOffset = String(dataPtr + calibrateString.length()).toFloat(); 
+                
+                tempOffset = newOffset;
+                
+                preferences.begin("config", false);
+                preferences.putFloat("tempOffset", tempOffset);
+                preferences.end();
+
+                Serial.println("\n[BLE COMMAND] Kalibracja temperatury...");
+            }
         }
     }
 };
@@ -112,6 +119,7 @@ void setup() {
 
   preferences.begin("config", true);
   sendInterval = preferences.getULong("interval", 60000);
+  tempOffset = preferences.getFloat("tempOffset", 0.0);
   preferences.end();
   Serial.printf("Aktualny interwal wysylania: %lu ms\n", sendInterval);
 
@@ -155,7 +163,7 @@ void loop() {
         if (mySensors[i].address == 0x38) { // AHT
           sensors_event_t humidity, temp;
           aht.getEvent(&humidity, &temp);
-          mySensors[i].metrics[0].value = temp.temperature;
+          mySensors[i].metrics[0].value = temp.temperature + tempOffset;
           mySensors[i].metrics[1].value = humidity.relative_humidity;
         } else if (mySensors[i].address == 0x77) { // BMP
           mySensors[i].metrics[0].value = bmp.readPressure() / 100.0F;
