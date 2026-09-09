@@ -69,10 +69,13 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
             std::string strManufacturerData = advertisedDevice.getManufacturerData();
             const char* dataPtr = strManufacturerData.c_str();
 
-            String searchString = uniqueSensorName + ";Interval:";
+            String intervalString = uniqueSensorName + ";Interval:";
+            String resetString = uniqueSensorName + ";Reset";
+            String resetString2 = uniqueSensorName + ";ResetToDefault";
             
-            if (strncmp(dataPtr, searchString.c_str(), searchString.length()) == 0) {
-                int newIntervalSec = String(dataPtr + searchString.length()).toInt();
+            // interwal wysyłania danych
+            if (strncmp(dataPtr, intervalString.c_str(), intervalString.length()) == 0) {
+                int newIntervalSec = String(dataPtr + intervalString.length()).toInt();
                 
                 if (newIntervalSec > 0) {
                     sendInterval = newIntervalSec * 1000UL;
@@ -81,8 +84,22 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
                     preferences.putULong("interval", sendInterval);
                     preferences.end();
                     
-                    Serial.printf("\n[BLE COMMAND] Zmieniono interwal na: %d sekund!\n", newIntervalSec);
+                    Serial.printf("\n[BLE COMMAND] Zmieniono interwal na: %d sekund\n", newIntervalSec);
                 }
+            }
+            // reset urządzenia
+            else if (strncmp(dataPtr, resetString.c_str(), resetString.length()) == 0) {
+                Serial.println("\n[BLE COMMAND] Ponowne uruchamianie...");
+                delay(500);
+                ESP.restart();
+            }
+            // reset do ustawień domyślnych
+            else if (strncmp(dataPtr, resetString2.c_str(), resetString2.length()) == 0) {
+                Serial.println("\n[BLE COMMAND] Resetowanie do ustawień domyślnych...");
+                preferences.clear();
+                preferences.end();
+                delay(500);
+                ESP.restart();
             }
         }
     }
