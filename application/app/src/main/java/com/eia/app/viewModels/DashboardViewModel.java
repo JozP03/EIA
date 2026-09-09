@@ -244,15 +244,16 @@ public class DashboardViewModel extends AndroidViewModel {
         context.append("\nZASADY STEROWANIA:\n");
         context.append("1. Możesz zmieniać częstotliwość raportowania czujników komendą: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
         context.append("2. Możesz zrestartować czujnik komendą: [CMD:RESET:PHYSICAL_ID].\n");
-        context.append("3. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
-        context.append("4. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
+        context.append("3. Możesz przywrócić czujnik do ustawień fabrycznych komendą: [CMD:FACTORY_RESET:PHYSICAL_ID].\n");
+        context.append("4. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
+        context.append("5. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
 
         context.append("\nINSTRUKCJA ODPOWIADANIA:\n");
         context.append("- Odpowiadaj zawsze w języku, w którym napisał użytkownik.\n");
         context.append("- Odpowiadaj bardzo krótko, konkretnie i wyłącznie na temat.\n");
         context.append("- Unikaj długich wstępów i zbędnych zdań.\n");
         context.append("- Jeśli użytkownik pyta o dane, podaj je od razu.\n");
-        context.append("- Jeśli użytkownik prosi o pomoc lub pyta co potrafisz, wymień zwięźle swoje funkcje.\n");
+        context.append("- Jeśli użytkownik prosi o pomoc lub pyta co potrafisz, wymień zwięźle swoje funkcje: monitorowanie sensorów, zmiana interwału raportowania, restart oraz przywracanie ustawień fabrycznych.\n");
 
         context.append("\nNa podstawie powyższych danych odpowiedz na pytanie użytkownika.");
         return context.toString();
@@ -299,6 +300,8 @@ public class DashboardViewModel extends AndroidViewModel {
                             payload = "INTERVAL:" + parts[2];
                         } else if ("RESET".equals(action)) {
                             payload = "RESET";
+                        } else if ("FACTORY_RESET".equals(action)) {
+                            payload = "ResetToDefault";
                         }
 
                         if (!payload.isEmpty()) {
