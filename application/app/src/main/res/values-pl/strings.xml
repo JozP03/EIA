@@ -67,6 +67,7 @@
     <string name="sensor_name_pres">Ciśnienie</string>
     <string name="sensor_name_lux">Jasność</string>
     <string name="sensor_name_volt">Napięcie</string>
+    <string name="sensor_reading_default">Odczyt %1$s</string>
 
     <!-- AI Chat -->
     <string name="ai_asistent_title">Asystent EIA.AI</string>

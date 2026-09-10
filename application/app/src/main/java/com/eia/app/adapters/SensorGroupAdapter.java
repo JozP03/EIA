@@ -104,12 +104,12 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
 
         String typeName;
         switch (sensor.getPrefix()) {
-            case "T": typeName = "Temperatura"; break;
-            case "H": typeName = "Wilgotność"; break;
-            case "P": typeName = "Ciśnienie"; break;
-            case "L": typeName = "Jasność"; break;
-            case "V": typeName = "Napięcie"; break;
-            default: typeName = "Odczyt " + sensor.getPrefix(); break;
+            case "T": typeName = container.getContext().getString(R.string.sensor_name_temp); break;
+            case "H": typeName = container.getContext().getString(R.string.sensor_name_hum); break;
+            case "P": typeName = container.getContext().getString(R.string.sensor_name_pres); break;
+            case "L": typeName = container.getContext().getString(R.string.sensor_name_lux); break;
+            case "V": typeName = container.getContext().getString(R.string.sensor_name_volt); break;
+            default: typeName = container.getContext().getString(R.string.sensor_reading_default, sensor.getPrefix()); break;
         }
         tvLabel.setText(typeName);
 
@@ -149,8 +149,8 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         float max = 100f;
 
         switch (prefix) {
-            case "T": // Temperatura 0-40
-                min = 0f; max = 40f; break;
+            case "T": // Temperatura -20 do 60
+                min = -20f; max = 60f; break;
             case "H": // Wilgotność 0-100
                 min = 0f; max = 100f; break;
             case "P": // Ciśnienie 950-1050

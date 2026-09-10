@@ -300,17 +300,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
                     if (!"global".equals(targetDeviceId)) {
                         String topic = targetDeviceId + "/" + physicalId + "/config";
-                        String payload = "";
-
-                        if ("SET_INTERVAL".equals(action) && parts.length >= 3) {
-                            payload = "INTERVAL:" + parts[2];
-                        } else if ("RESET".equals(action)) {
-                            payload = "RESET";
-                        } else if ("FACTORY_RESET".equals(action)) {
-                            payload = "ResetToDefault";
-                        } else if ("CALIBRATE".equals(action) && parts.length >= 3) {
-                            payload = "CALIBRATION:" + parts[2];
-                        }
+                        String payload = getPayload(action, parts);
 
                         if (!payload.isEmpty()) {
                             MqttRepository.getInstance().publishCommand(topic, payload);
@@ -327,6 +317,22 @@ public class DashboardViewModel extends AndroidViewModel {
             }
         }
         return response;
+    }
+
+    @NonNull
+    private static String getPayload(String action, String[] parts) {
+        String payload = "";
+
+        if ("SET_INTERVAL".equals(action) && parts.length >= 3) {
+            payload = "INTERVAL:" + parts[2];
+        } else if ("RESET".equals(action)) {
+            payload = "RESET";
+        } else if ("FACTORY_RESET".equals(action)) {
+            payload = "ResetToDefault";
+        } else if ("CALIBRATE".equals(action) && parts.length >= 3) {
+            payload = "CALIBRATION:" + parts[2];
+        }
+        return payload;
     }
 
     private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, long timestamp, boolean isLive) {
@@ -421,7 +427,6 @@ public class DashboardViewModel extends AndroidViewModel {
         boolean found = false;
         for (int i = 0; i < currentList.size(); i++) {
             if (currentList.get(i).getId().equals(device.getId())) {
-                // Tworzymy kopię, aby wymusić odświeżenie w ListAdapterze (DiffUtil)
                 currentList.set(i, device.copy());
                 found = true;
                 break;
@@ -487,6 +492,22 @@ public class DashboardViewModel extends AndroidViewModel {
     public void requestHistorySync(String deviceId) {
         long currentTime = System.currentTimeMillis();
         Long lastSync = lastSyncTimes.get(deviceId);
+
+        List<Device> currentList = devices.getValue();
+        boolean isOnline = false;
+        if (currentList != null) {
+            for (Device d : currentList) {
+                if (d.getId().equals(deviceId)) {
+                    isOnline = d.isOnline();
+                    break;
+                }
+            }
+        }
+
+        if (!isOnline) {
+            Log.d(TAG, "Synchronizacja pominięta - bramka offline: " + deviceId);
+            return;
+        }
 
         if (lastSync == null || (currentTime - lastSync) > 2 * 60 * 1000) {
             String commandTopic = deviceId + "/command";

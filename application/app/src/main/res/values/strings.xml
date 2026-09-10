@@ -67,6 +67,7 @@
     <string name="sensor_name_pres">Pressure</string>
     <string name="sensor_name_lux">Brightness</string>
     <string name="sensor_name_volt">Voltage</string>
+    <string name="sensor_reading_default">Reading %1$s</string>
 
     <!-- AI Chat -->
     <string name="ai_asistent_title">EIA.AI Assistant</string>
