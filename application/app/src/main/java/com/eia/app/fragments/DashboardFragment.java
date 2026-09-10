@@ -102,10 +102,9 @@ public class DashboardFragment extends Fragment {
 
         viewModel.getDevices().observe(getViewLifecycleOwner(), newDevices -> {
             if (newDevices != null) {
-                // ListAdapter
                 adapter.submitList(new ArrayList<>(newDevices));
+                adapter.notifyDataSetChanged();
 
-                // Obsługa napisu pustej listy
                 if (newDevices.isEmpty()) {
                     tvEmpty.setVisibility(View.VISIBLE);
                     rv.setVisibility(View.GONE);
@@ -154,7 +153,6 @@ public class DashboardFragment extends Fragment {
 
                 progressBar.setVisibility(View.VISIBLE);
 
-                // Budujemy pełny prompt z kontekstem
                 String fullPrompt = viewModel.getAiSystemContext() + "\n\nPytanie użytkownika: " + text;
 
                 AiProvider provider = AiFactory.getProvider(requireContext());
@@ -164,8 +162,7 @@ public class DashboardFragment extends Fragment {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() -> {
                                 progressBar.setVisibility(View.GONE);
-                                
-                                // Przetwarzamy odpowiedź AI (szukamy komend)
+
                                 String cleanText = viewModel.handleAiResponseAndGetCleanText("global", response);
                                 
                                 chatAdapter.addMessage(new ChatMessage(cleanText, ChatMessage.Type.AI));

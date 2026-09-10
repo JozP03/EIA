@@ -11,16 +11,21 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.eia.app.R;
+import com.eia.app.db.AppDatabase;
+import com.eia.app.db.SensorReading;
 import com.eia.app.models.Device;
 import com.eia.app.models.MqttEvent;
 import com.eia.app.models.Sensor;
+import com.eia.app.models.SensorMetadata;
 import com.eia.app.repositories.MqttRepository;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DashboardViewModel extends AndroidViewModel {
 
@@ -31,14 +36,14 @@ public class DashboardViewModel extends AndroidViewModel {
     private final MutableLiveData<List<Device>> devices = new MutableLiveData<>(new ArrayList<>());
     private final Gson gson = new Gson();
     private final SharedPreferences prefs;
-    private final com.eia.app.db.AppDatabase db;
-    private final java.util.Map<String, Long> lastSyncTimes = new java.util.HashMap<>();
+    private final AppDatabase db;
+    private final Map<String, Long> lastSyncTimes = new HashMap<>();
 
 
     public DashboardViewModel(@NonNull Application application) {
         super(application);
         prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        db = com.eia.app.db.AppDatabase.getDatabase(application);
+        db = AppDatabase.getDatabase(application);
         loadDevices();
         observeMqttEvents();
         cleanOldData();
@@ -144,7 +149,7 @@ public class DashboardViewModel extends AndroidViewModel {
                     if (valStr.isEmpty()) continue;
 
                     float value = Float.parseFloat(valStr);
-                    String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
+                    String unit = SensorMetadata.getUnitForPrefix(prefix);
                     
                     String logicSensorId = physicalId + "_" + prefix;
                     boolean isPrimary = false;
@@ -199,7 +204,7 @@ public class DashboardViewModel extends AndroidViewModel {
                     
                     if (valStr.isEmpty()) continue;
 
-                    String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
+                    String unit = SensorMetadata.getUnitForPrefix(prefix);
                     float value = Float.parseFloat(valStr);
 
                     String logicSensorId = sensorId + "_" + prefix;
@@ -356,7 +361,6 @@ public class DashboardViewModel extends AndroidViewModel {
             if (existingName != null) {
                 name = existingName;
             } else {
-                // Jeśli nie ma nazwy, używamy nazwy przyjaznej dla prefixu lub ID
                 switch (prefix) {
                     case "T": name = getApplication().getString(R.string.sensor_name_temp); break;
                     case "H": name = getApplication().getString(R.string.sensor_name_hum); break;
@@ -370,8 +374,8 @@ public class DashboardViewModel extends AndroidViewModel {
         }
 
         // zapisanie do bazy danych
-        com.eia.app.db.SensorReading reading = new com.eia.app.db.SensorReading(id, value, timestamp);
-        com.eia.app.db.AppDatabase.databaseWriteExecutor.execute(() -> {
+        SensorReading reading = new SensorReading(id, value, timestamp);
+        AppDatabase.databaseWriteExecutor.execute(() -> {
             db.readingDao().insert(reading);
         });
     }
@@ -379,12 +383,12 @@ public class DashboardViewModel extends AndroidViewModel {
     private void cleanOldData() {
         // usuwanie danych starszych niż 24 godziny
         long threshold = System.currentTimeMillis() - (24 * 60 * 60 * 1000);
-        com.eia.app.db.AppDatabase.databaseWriteExecutor.execute(() -> {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
             db.readingDao().deleteOldReadings(threshold);
         });
     }
 
-    public LiveData<List<com.eia.app.db.SensorReading>> getReadingsForSensor(String sensorId) {
+    public LiveData<List<SensorReading>> getReadingsForSensor(String sensorId) {
         return db.readingDao().getReadingsForSensor(sensorId);
     }
 
@@ -417,7 +421,8 @@ public class DashboardViewModel extends AndroidViewModel {
         boolean found = false;
         for (int i = 0; i < currentList.size(); i++) {
             if (currentList.get(i).getId().equals(device.getId())) {
-                currentList.set(i, device);
+                // Tworzymy kopię, aby wymusić odświeżenie w ListAdapterze (DiffUtil)
+                currentList.set(i, device.copy());
                 found = true;
                 break;
             }
@@ -425,11 +430,34 @@ public class DashboardViewModel extends AndroidViewModel {
         
         if (!found) {
             if (currentList.size() >= 5) return;
-            currentList.add(device);
+            currentList.add(device.copy());
         }
         
         devices.setValue(new ArrayList<>(currentList));
         persistDevices(currentList);
+    }
+
+    public void renameSensorGroup(String deviceId, String physicalId, String newName) {
+        List<Device> currentList = devices.getValue();
+        if (currentList == null) return;
+
+        boolean updated = false;
+        for (Device d : currentList) {
+            if (d.getId().equals(deviceId)) {
+                if (d.getSensorList() != null) {
+                    for (Sensor s : d.getSensorList()) {
+                        if (physicalId.equals(s.getPhysicalId())) {
+                            s.setName(newName);
+                            updated = true;
+                        }
+                    }
+                }
+                if (updated) {
+                    saveDevice(d);
+                }
+                break;
+            }
+        }
     }
 
     public void deleteDevice(String deviceId) {

@@ -33,11 +33,17 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
     private final DashboardViewModel viewModel;
     private final LifecycleOwner lifecycleOwner;
     private final Map<String, List<Sensor>> sensorGroups = new HashMap<>();
+    private final OnSensorLongClickListener longClickListener;
 
-    public SensorGroupAdapter(DashboardViewModel viewModel, LifecycleOwner lifecycleOwner) {
+    public interface OnSensorLongClickListener {
+        void onSensorLongClick(String physicalId, String currentName);
+    }
+
+    public SensorGroupAdapter(DashboardViewModel viewModel, LifecycleOwner lifecycleOwner, OnSensorLongClickListener longClickListener) {
         super(new StringDiffCallback());
         this.viewModel = viewModel;
         this.lifecycleOwner = lifecycleOwner;
+        this.longClickListener = longClickListener;
     }
 
     public void updateData(List<Sensor> sensors) {
@@ -55,6 +61,7 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
             sensorGroups.get(pid).add(s);
         }
         submitList(physicalIds);
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -71,9 +78,15 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         
         if (sensorsInGroup == null || sensorsInGroup.isEmpty()) return;
 
-        // Wyświetlamy nazwę czujnika. w przeciwnym razie samo ID.
         Sensor first = sensorsInGroup.get(0);
         holder.tvTitle.setText(first.getName());
+
+        holder.itemView.setOnLongClickListener(v -> {
+            if (longClickListener != null) {
+                longClickListener.onSensorLongClick(physicalId, first.getName());
+            }
+            return true;
+        });
 
         holder.measuresContainer.removeAllViews();
         for (Sensor s : sensorsInGroup) {
