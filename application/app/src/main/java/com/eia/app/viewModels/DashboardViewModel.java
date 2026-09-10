@@ -138,6 +138,8 @@ public class DashboardViewModel extends AndroidViewModel {
                 device.setSensorList(sensors);
             }
 
+            List<SensorReading> readingsToInsert = new ArrayList<>();
+
             boolean firstInMessage = true;
             for (int i = 2; i < parts.length; i++) {
                 String measure = parts[i].trim();
@@ -167,8 +169,16 @@ public class DashboardViewModel extends AndroidViewModel {
                         firstInMessage = false;
                     }
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, physicalId, timestamp, false);
+                    updateSensorObject(sensors, logicSensorId, prefix, unit, value, isPrimary, physicalId, false);
+
+                    readingsToInsert.add(new SensorReading(logicSensorId, value, timestamp));
                 }
+            }
+
+            if (!readingsToInsert.isEmpty()) {
+                AppDatabase.databaseWriteExecutor.execute(() -> {
+                    db.readingDao().insertAll(readingsToInsert);
+                });
             }
         } catch (Exception e) {
             Log.e(TAG, "Błąd parsowania historii: " + payload + " -> " + e.getMessage());
@@ -210,7 +220,13 @@ public class DashboardViewModel extends AndroidViewModel {
                     String logicSensorId = sensorId + "_" + prefix;
                     boolean isPrimary = !firstFound;
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, System.currentTimeMillis(), true);
+                    updateSensorObject(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, true);
+
+                    SensorReading reading = new SensorReading(logicSensorId, value, System.currentTimeMillis());
+                    AppDatabase.databaseWriteExecutor.execute(() -> {
+                        db.readingDao().insert(reading);
+                    });
+                    
                     firstFound = true;
                 }
             }
@@ -222,7 +238,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
     public String getAiSystemContext() {
         StringBuilder context = new StringBuilder();
-        context.append("Jesteś inteligentnym asystentem systemu EIA.AI. ");
+        context.append("Jesteś inteligentnym asystentem systemu EIA. ");
         context.append("Pomagasz użytkownikowi monitorować jego dom. ");
         context.append("Oto aktualne dane z systemu:\n\n");
 
@@ -335,7 +351,7 @@ public class DashboardViewModel extends AndroidViewModel {
         return payload;
     }
 
-    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, long timestamp, boolean isLive) {
+    private void updateSensorObject(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, boolean isLive) {
         boolean found = false;
         for (Sensor s : sensors) {
             if (s.getId().equals(id)) {
@@ -378,12 +394,6 @@ public class DashboardViewModel extends AndroidViewModel {
             }
             sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary, physicalId));
         }
-
-        // zapisanie do bazy danych
-        SensorReading reading = new SensorReading(id, value, timestamp);
-        AppDatabase.databaseWriteExecutor.execute(() -> {
-            db.readingDao().insert(reading);
-        });
     }
 
     private void cleanOldData() {

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">EIA.AI</string>
+    <string name="app_name">EIA</string>
 
     <!-- Navigation Descriptions -->
     <string name="back_button_description">Wstecz</string>
@@ -70,11 +70,11 @@
     <string name="sensor_reading_default">Odczyt %1$s</string>
 
     <!-- AI Chat -->
-    <string name="ai_asistent_title">Asystent EIA.AI</string>
+    <string name="ai_asistent_title">Asystent EIA</string>
     <string name="ai_hint">Zadaj pytanie…</string>
     <string name="ai_loading">AI myśli…</string>
     <string name="ai_error_prefix">Błąd AI: %1$s</string>
-    <string name="btn_nav_about">O aplikacji</string>
+    <string name="btn_nav_about">O projekcie</string>
 
     <!-- Settings -->
     <string name="settings_title">Ustawienia</string>
@@ -101,7 +101,7 @@
 
     <!-- About -->
     <string name="about_version_format">Wersja Beta 1.0</string>
-    <string name="about_description">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua</string>
+    <string name="about_description">EIA.AI to inteligentny system monitorowania i zarządzania sieciami sensorowymi, zaprojektowany w ramach projektu inżynierskiego.</string>
     <string name="about_authors_label">Autorzy</string>
     <string name="about_authors_list">Brak</string>
     <string name="about_copyright">© 2026 Projekt EIA.</string>
