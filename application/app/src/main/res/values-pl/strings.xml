@@ -102,8 +102,18 @@
     <!-- About -->
     <string name="about_version_format">Wersja Beta 1.0</string>
     <string name="about_description">EIA.AI to inteligentny system monitorowania i zarządzania sieciami sensorowymi, zaprojektowany w ramach projektu inżynierskiego.</string>
-    <string name="about_authors_label">Autorzy</string>
-    <string name="about_authors_list">Brak</string>
+    <string name="about_credits_label">Podziękowania</string>
+    <string name="about_source_label">Kod źródłowy</string>
+    <string name="about_source_link"><![CDATA[<a href="https://github.com/JozP03/EIA">Repozytorium GitHub</a>]]></string>
+    <string name="about_credits_list"><![CDATA[
+        • <a href="https://github.com/knolleary/pubsubclient">PubSubClient</a><br>
+        • <a href="https://github.com/mik3y/usb-serial-for-android">usb-serial-for-android</a><br>
+        • <a href="https://github.com/hivemq/hivemq-mqtt-client">hivemq-mqtt-client</a><br>
+        • <a href="https://github.com/square/retrofit">Retrofit</a><br>
+        • <a href="https://github.com/philjay/mpandroidchart">MPAndroidChart</a><br>
+        • <a href="https://github.com/square/okhttp">okhttp</a><br>
+        • <a href="https://github.com/google/gson">Gson</a>
+    ]]></string>
     <string name="about_copyright">© 2026 Projekt EIA.</string>
 
     <!-- Dialogs and Toasts -->

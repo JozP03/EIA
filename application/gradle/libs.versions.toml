@@ -39,4 +39,3 @@ mp-android-chart = { group = "com.github.PhilJay", name = "MPAndroidChart", vers
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-

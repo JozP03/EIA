@@ -102,8 +102,18 @@
     <!-- About -->
     <string name="about_version_format">Version Beta 1.0</string>
     <string name="about_description">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua</string>
-    <string name="about_authors_label">Authors</string>
-    <string name="about_authors_list">None</string>
+    <string name="about_credits_label">Credits</string>
+    <string name="about_source_label">Source Code</string>
+    <string name="about_source_link"><![CDATA[<a href="https://github.com/JozP03/EIA">GitHub Repository</a>]]></string>
+    <string name="about_credits_list"><![CDATA[
+        • <a href="https://github.com/knolleary/pubsubclient">PubSubClient</a><br>
+        • <a href="https://github.com/mik3y/usb-serial-for-android">usb-serial-for-android</a><br>
+        • <a href="https://github.com/hivemq/hivemq-mqtt-client">hivemq-mqtt-client</a><br>
+        • <a href="https://github.com/square/retrofit">Retrofit</a><br>
+        • <a href="https://github.com/philjay/mpandroidchart">MPAndroidChart</a><br>
+        • <a href="https://github.com/square/okhttp">okhttp</a><br>
+        • <a href="https://github.com/google/gson">Gson</a>
+    ]]></string>
     <string name="about_copyright">© 2026 EIA Project.</string>
 
     <!-- Dialogs and Toasts -->
