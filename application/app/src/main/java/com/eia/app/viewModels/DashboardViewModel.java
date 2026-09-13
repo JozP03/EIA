@@ -267,8 +267,11 @@ public class DashboardViewModel extends AndroidViewModel {
         context.append("2. Możesz zrestartować czujnik komendą: [CMD:RESET:PHYSICAL_ID].\n");
         context.append("3. Możesz przywrócić czujnik do ustawień fabrycznych komendą: [CMD:FACTORY_RESET:PHYSICAL_ID].\n");
         context.append("4. Możesz kalibrować WYŁĄCZNIE czujniki temperatury komendą: [CMD:CALIBRATE:PHYSICAL_ID:VALUE], gdzie VALUE to przesunięcie (np. -1.0 lub 0.5).\n");
-        context.append("5. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
-        context.append("6. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
+        context.append("5. Możesz zmienić tryb pracy czujnika (I2C lub EXT) komendą: [CMD:SET_MODE:PHYSICAL_ID:MODE:UNIT]. MODE to 'I2C' lub 'EXT'. UNIT to jednostka podana przez użytkownika.\n");
+        context.append("   * WAŻNE: Przy zmianie na tryb EXT, poinformuj użytkownika o konieczności podłączenia pinu DATA OUT czujnika do pinu 0 układu.\n");
+        context.append("   * Jeśli użytkownik nie podał jednostki przy prośbie o zmianę trybu, zapytaj go o nią.\n");
+        context.append("6. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
+        context.append("7. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
 
         context.append("\nINSTRUKCJA ODPOWIADANIA:\n");
         context.append("- Odpowiadaj zawsze w języku, w którym napisał użytkownik.\n");
@@ -336,7 +339,7 @@ public class DashboardViewModel extends AndroidViewModel {
     }
 
     @NonNull
-    private static String getPayload(String action, String[] parts) {
+    private String getPayload(String action, String[] parts) {
         String payload = "";
 
         if ("SET_INTERVAL".equals(action) && parts.length >= 3) {
@@ -347,8 +350,32 @@ public class DashboardViewModel extends AndroidViewModel {
             payload = "ResetToDefault";
         } else if ("CALIBRATE".equals(action) && parts.length >= 3) {
             payload = "CALIBRATION:" + parts[2];
+        } else if ("SET_MODE".equals(action) && parts.length >= 4) {
+            String mode = parts[2];
+            String unit = parts[3];
+            payload = "MODE:" + mode;
+            saveCustomUnit(parts[1], unit);
         }
         return payload;
+    }
+
+    private void saveCustomUnit(String physicalId, String unit) {
+        prefs.edit().putString("custom_unit_" + physicalId, unit).apply();
+        
+        // Aktualizacja aktualnie załadowanych sensorów
+        List<Device> currentList = devices.getValue();
+        if (currentList != null) {
+            for (Device d : currentList) {
+                if (d.getSensorList() != null) {
+                    for (Sensor s : d.getSensorList()) {
+                        if (physicalId.equals(s.getPhysicalId())) {
+                            s.setUnit(unit);
+                        }
+                    }
+                }
+            }
+            devices.setValue(new ArrayList<>(currentList));
+        }
     }
 
     private void updateSensorObject(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, boolean isLive) {
@@ -393,6 +420,17 @@ public class DashboardViewModel extends AndroidViewModel {
                 }
             }
             sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary, physicalId));
+        }
+        
+        // Zastosowanie niestandardowej jednostki, jeśli istnieje
+        String customUnit = prefs.getString("custom_unit_" + physicalId, null);
+        if (customUnit != null) {
+            for (Sensor s : sensors) {
+                if (id.equals(s.getId())) {
+                    s.setUnit(customUnit);
+                    break;
+                }
+            }
         }
     }
 
