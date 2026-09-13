@@ -14,6 +14,8 @@
 #define I2C_SDA 2
 #define I2C_SCL 3
 
+bool modeI2C = true;
+
 Adafruit_BMP280 bmp;
 Adafruit_AHTX0 aht;
 Preferences preferences;
@@ -67,6 +69,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
             String resetString = uniqueSensorName + ";Reset";
             String resetString2 = uniqueSensorName + ";ResetToDefault";
             String calibrateString = uniqueSensorName + ";Calibrate";
+            String modeString = uniqueSensorName + ";Mode:";
             
             // interwal wysyłania danych
             if (strncmp(dataPtr, intervalString.c_str(), intervalString.length()) == 0) {
@@ -108,6 +111,22 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
 
                 Serial.println("\n[BLE COMMAND] Kalibracja temperatury...");
             }
+            // zmiana trybu pracy urządzenia
+            else if (strncmp(dataPtr, modeString.c_str(), modeString.length()) == 0) {
+                String newMode = String(dataPtr + modeString.length());
+                
+                if (newMode.startsWith("EXT")) {
+                    modeI2C = false;
+                } else if (newMode.startsWith("I2C")) {
+                    modeI2C = true;
+                }
+                
+                preferences.begin("config", false);
+                preferences.putBool("modeI2C", modeI2C);
+                preferences.end();
+                
+                Serial.println("\n[BLE COMMAND] Zmieniono tryb pracy na: " + newMode);
+            }
         }
     }
 };
@@ -120,6 +139,7 @@ void setup() {
   preferences.begin("config", true);
   sendInterval = preferences.getULong("interval", 60000);
   tempOffset = preferences.getFloat("tempOffset", 0.0);
+  modeI2C = preferences.getBool("modeI2C", true);
   preferences.end();
   Serial.printf("Aktualny interwal wysylania: %lu ms\n", sendInterval);
 
@@ -171,18 +191,25 @@ void loop() {
       }
     }
 
-    String payload = uniqueSensorName;
+String payload = uniqueSensorName;
     bool anyData = false;
 
-    for (int i = 0; i < numSensors; i++) {
-      if (mySensors[i].isActive) {
-        for (int m = 0; m < mySensors[i].metricCount; m++) {
-          payload += ";" + mySensors[i].metrics[m].prefix + ":" +
-                     String(mySensors[i].metrics[m].value,
-                            mySensors[i].metrics[m].decimals);
-          anyData = true;
+    if (modeI2C) {
+        // --- Default: I2C (AHT20 / BMP280) ---
+        for (int i = 0; i < numSensors; i++) {
+            if (mySensors[i].isActive) {
+                for (int m = 0; m < mySensors[i].metricCount; m++) {
+                    payload += ";" + mySensors[i].metrics[m].prefix + ":" +
+                               String(mySensors[i].metrics[m].value, mySensors[i].metrics[m].decimals);
+                    anyData = true;
+                }
+            }
         }
-      }
+    } else {
+        // --- Simple Mode: Analog/Digital pin 0 ---
+        int extVal = analogRead(0);
+        payload += ";EXT:" + String(extVal);
+        anyData = true;
     }
 
     if (!anyData) {
