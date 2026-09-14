@@ -131,6 +131,7 @@
     <string name="device_actions_hint">Device name</string>
     <string name="device_actions_btn_save">SAVE CHANGES</string>
     <string name="device_actions_btn_delete">DELETE DEVICE</string>
+    <string name="loading_data">Loading data…</string>
 
     <!-- Error Messages -->
     <string name="error_mqtt_host_required">MQTT broker address is required</string>

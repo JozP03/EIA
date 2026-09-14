@@ -131,6 +131,7 @@
     <string name="device_actions_hint">Nazwa urządzenia</string>
     <string name="device_actions_btn_save">ZAPISZ ZMIANY</string>
     <string name="device_actions_btn_delete">USUŃ URZĄDZENIE</string>
+    <string name="loading_data">Wczytywanie danych…</string>
 
     <!-- Error Messages -->
     <string name="error_mqtt_host_required">Adres brokera MQTT jest wymagany</string>

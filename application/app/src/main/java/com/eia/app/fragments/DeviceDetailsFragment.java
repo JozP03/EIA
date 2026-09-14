@@ -97,6 +97,14 @@ public class DeviceDetailsFragment extends Fragment {
             }
         });
 
+        // Obsługa nakładki ładowania
+        View loadingOverlay = view.findViewById(R.id.loadingOverlay);
+        viewModel.getIsSyncing().observe(getViewLifecycleOwner(), isSyncing -> {
+            if (isSyncing != null) {
+                loadingOverlay.setVisibility(isSyncing ? View.VISIBLE : View.GONE);
+            }
+        });
+
         // Obsługa dymka AI
         View fabAi = view.findViewById(R.id.fabAiChat);
         SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);

@@ -3,6 +3,8 @@ package com.eia.app.viewModels;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -38,6 +40,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final SharedPreferences prefs;
     private final AppDatabase db;
     private final Map<String, Long> lastSyncTimes = new HashMap<>();
+    private final MutableLiveData<Boolean> isSyncing = new MutableLiveData<>(false);
 
 
     public DashboardViewModel(@NonNull Application application) {
@@ -122,6 +125,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private void processHistoryMessage(Device device, String payload) {
         if (payload == null || payload.equalsIgnoreCase("EOF")) {
             Log.d(TAG, "Koniec przesyłania historii (EOF)");
+            isSyncing.postValue(false);
             return;
         }
 
@@ -252,10 +256,15 @@ public class DashboardViewModel extends AndroidViewModel {
                 
                 if (d.getSensorList() != null) {
                     for (Sensor s : d.getSensorList()) {
+                        context.append("  * ").append(s.getName());
+                        if (!s.getName().equals(s.getPhysicalId())) {
+                            context.append(" (Hardware ID: ").append(s.getPhysicalId()).append(")");
+                        }
+                        
                         if (s.isHasError()) {
-                            context.append("  * ").append(s.getName()).append(": BŁĄD/BRAK DANYCH\n");
+                            context.append(": BŁĄD/BRAK DANYCH\n");
                         } else {
-                            context.append("  * ").append(s.getName()).append(": ")
+                            context.append(": ")
                                    .append(s.getValue()).append(" ").append(s.getUnit()).append("\n");
                         }
                     }
@@ -306,8 +315,9 @@ public class DashboardViewModel extends AndroidViewModel {
                             for (Device d : currentList) {
                                 if (d.getSensorList() != null) {
                                     for (Sensor s : d.getSensorList()) {
-                                        if (physicalId.equals(s.getPhysicalId())) {
+                                        if (physicalId.equals(s.getPhysicalId()) || physicalId.equalsIgnoreCase(s.getName())) {
                                             targetDeviceId = d.getId();
+                                            physicalId = s.getPhysicalId(); 
                                             break;
                                         }
                                     }
@@ -343,17 +353,17 @@ public class DashboardViewModel extends AndroidViewModel {
         String payload = "";
 
         if ("SET_INTERVAL".equals(action) && parts.length >= 3) {
-            payload = "INTERVAL:" + parts[2];
+            payload = "Interval:" + parts[2];
         } else if ("RESET".equals(action)) {
-            payload = "RESET";
+            payload = "Reset";
         } else if ("FACTORY_RESET".equals(action)) {
             payload = "ResetToDefault";
         } else if ("CALIBRATE".equals(action) && parts.length >= 3) {
-            payload = "CALIBRATION:" + parts[2];
+            payload = "Calibration:" + parts[2];
         } else if ("SET_MODE".equals(action) && parts.length >= 4) {
             String mode = parts[2];
             String unit = parts[3];
-            payload = "MODE:" + mode;
+            payload = "Mode:" + mode;
             saveCustomUnit(parts[1], unit);
         }
         return payload;
@@ -558,6 +568,16 @@ public class DashboardViewModel extends AndroidViewModel {
         }
 
         if (lastSync == null || (currentTime - lastSync) > 2 * 60 * 1000) {
+            isSyncing.postValue(true);
+            
+            // Timeout dla ładowania 
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (Boolean.TRUE.equals(isSyncing.getValue())) {
+                    isSyncing.postValue(false);
+                    Log.d(TAG, "Sync timeout reached for: " + deviceId);
+                }
+            }, 10000); // 10 sekund
+
             String commandTopic = deviceId + "/command";
             MqttRepository.getInstance().publishCommand(commandTopic, "GET_HISTORY");
             lastSyncTimes.put(deviceId, currentTime);
@@ -565,6 +585,10 @@ public class DashboardViewModel extends AndroidViewModel {
         } else {
             Log.d(TAG, "Synchronizacja zablokowana (throttle) dla: " + deviceId);
         }
+    }
+
+    public LiveData<Boolean> getIsSyncing() {
+        return isSyncing;
     }
 
     public void initMqttConnection() {
