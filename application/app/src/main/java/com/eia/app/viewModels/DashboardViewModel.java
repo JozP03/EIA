@@ -570,7 +570,7 @@ public class DashboardViewModel extends AndroidViewModel {
         if (lastSync == null || (currentTime - lastSync) > 2 * 60 * 1000) {
             isSyncing.postValue(true);
             
-            // Timeout dla ładowania 
+            // Timeout dla ładowania
             new Handler(Looper.getMainLooper()).postDelayed(() -> {
                 if (Boolean.TRUE.equals(isSyncing.getValue())) {
                     isSyncing.postValue(false);

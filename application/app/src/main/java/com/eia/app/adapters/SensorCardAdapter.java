@@ -20,11 +20,15 @@ import androidx.lifecycle.LifecycleOwner;
 import com.eia.app.db.SensorReading;
 import com.eia.app.viewModels.DashboardViewModel;
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.ValueFormatter;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -74,11 +78,8 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
         if (readings.isEmpty()) return;
 
         List<Entry> entries = new ArrayList<>();
-        long firstTimestamp = readings.get(0).getTimestamp();
-
         for (SensorReading reading : readings) {
-            float x = (float) (reading.getTimestamp() - firstTimestamp) / 1000f; 
-            entries.add(new Entry(x, reading.getValue()));
+            entries.add(new Entry(reading.getTimestamp(), reading.getValue()));
         }
 
         int accentGreen = chart.getContext().getColor(R.color.accent_green);
@@ -98,12 +99,28 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
         chart.getDescription().setEnabled(false);
         chart.getLegend().setEnabled(false);
         chart.getAxisRight().setEnabled(false);
+
+        // Konfiguracja osi czasu (X)
+        XAxis xAxis = chart.getXAxis();
+        xAxis.setEnabled(true);
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setDrawGridLines(false);
+        xAxis.setTextColor(chart.getContext().getColor(R.color.text_muted));
+        xAxis.setTextSize(8f);
+        xAxis.setLabelCount(4);
+        xAxis.setValueFormatter(new ValueFormatter() {
+            private final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            @Override
+            public String getFormattedValue(float value) {
+                return sdf.format(new Date((long) value));
+            }
+        });
+
         chart.getAxisLeft().setDrawGridLines(false);
         chart.getAxisLeft().setTextColor(chart.getContext().getColor(R.color.text_muted));
         chart.getAxisLeft().setTextSize(10f);
         chart.getAxisLeft().setSpaceTop(30f);
         chart.getAxisLeft().setSpaceBottom(30f);
-        chart.getXAxis().setEnabled(false);
         
         chart.setTouchEnabled(false);
         chart.invalidate();
