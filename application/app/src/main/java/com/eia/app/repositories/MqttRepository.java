@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.eia.app.models.MqttEvent;
 import com.hivemq.client.mqtt.MqttClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
+import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
 
 import java.util.UUID;
 
@@ -32,7 +33,7 @@ public class MqttRepository {
         return instance;
     }
 
-    public void configure(String host, String username, String password) {
+    public void configure(String host, int port, String username, String password) {
         if (host == null || host.isEmpty()) {
             Log.e(TAG, "Server host cannot be null or empty.");
             return;
@@ -41,19 +42,23 @@ public class MqttRepository {
         this.username = username;
         this.password = password;
 
-        client = MqttClient.builder()
+        Mqtt5ClientBuilder builder = MqttClient.builder()
                 .useMqttVersion5()
                 .identifier("app" + UUID.randomUUID().toString())
                 .serverHost(host)
-                .serverPort(8883)
-                .sslWithDefaultConfig()
+                .serverPort(port)
                 .automaticReconnectWithDefaultConfig()
                 .addConnectedListener(context -> {
                     Log.d(TAG, "Połączono (lub połączono ponownie)");
                     subscribeTopics();
                 })
-                .addDisconnectedListener(context -> Log.w(TAG, "Rozłączono: " + (context.getCause() != null ? context.getCause().getMessage() : "brak powodu")))
-                .buildAsync();
+                .addDisconnectedListener(context -> Log.w(TAG, "Rozłączono: " + (context.getCause() != null ? context.getCause().getMessage() : "brak powodu")));
+
+        if (port == 8883) {
+            client = builder.sslWithDefaultConfig().buildAsync();
+        } else {
+            client = builder.buildAsync();
+        }
     }
 
     public void connectToBroker(){

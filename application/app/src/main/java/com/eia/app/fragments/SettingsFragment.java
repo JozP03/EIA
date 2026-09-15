@@ -35,7 +35,7 @@ import java.util.Objects;
 
 public class SettingsFragment extends Fragment {
 
-    private TextInputEditText etMqttHost, etMqttUser, etMqttPassword;
+    private TextInputEditText etMqttHost, etMqttPort, etMqttUser, etMqttPassword;
     private TextInputEditText etAiBaseUrl, etAiApiKey;
     private AutoCompleteTextView actvAiProvider, actvLanguage;
     private MqttRepository mqtt;
@@ -89,6 +89,7 @@ public class SettingsFragment extends Fragment {
         });
 
         etMqttHost = view.findViewById(R.id.etMqttHost);
+        etMqttPort = view.findViewById(R.id.etMqttPort);
         etMqttUser = view.findViewById(R.id.etMqttUser);
         etMqttPassword = view.findViewById(R.id.etMqttPassword);
 
@@ -167,6 +168,7 @@ public class SettingsFragment extends Fragment {
 
     private void loadSettings() {
         etMqttHost.setText(prefs.getString("mqtt_host", "broker.hivemq.com"));
+        etMqttPort.setText(prefs.getString("mqtt_port", "8883"));
         etMqttUser.setText(prefs.getString("mqtt_user", ""));
         etMqttPassword.setText(prefs.getString("mqtt_pass", ""));
 
@@ -183,6 +185,7 @@ public class SettingsFragment extends Fragment {
 
     private void saveSettings() {
         String host = Objects.requireNonNull(etMqttHost.getText()).toString().trim();
+        String portStr = Objects.requireNonNull(etMqttPort.getText()).toString().trim();
         String user = Objects.requireNonNull(etMqttUser.getText()).toString().trim();
         String pass = Objects.requireNonNull(etMqttPassword.getText()).toString().trim();
 
@@ -196,6 +199,19 @@ public class SettingsFragment extends Fragment {
         if (host.isEmpty()) {
             etMqttHost.setError(getString(R.string.error_mqtt_host_required));
             hasError = true;
+        }
+
+        int port = 8883;
+        if (portStr.isEmpty()) {
+            etMqttPort.setError("Port MQTT jest wymagany");
+            hasError = true;
+        } else {
+            try {
+                port = Integer.parseInt(portStr);
+            } catch (Exception e) {
+                etMqttPort.setError("Niepoprawny numer portu");
+                hasError = true;
+            }
         }
 
         if (user.isEmpty()) {
@@ -214,6 +230,7 @@ public class SettingsFragment extends Fragment {
 
         prefs.edit()
                 .putString("mqtt_host", host)
+                .putString("mqtt_port", portStr)
                 .putString("mqtt_user", user)
                 .putString("mqtt_pass", pass)
                 .putString("ai_provider", aiProvider)
@@ -222,7 +239,7 @@ public class SettingsFragment extends Fragment {
                 .apply();
 
         mqtt.disconnectFromBroker();
-        mqtt.configure(host, user, pass);
+        mqtt.configure(host, port, user, pass);
         mqtt.connectToBroker();
 
         Toast.makeText(getContext(), getString(R.string.toast_settings_saved), Toast.LENGTH_SHORT).show();

@@ -138,6 +138,23 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilMqttPort"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/personalize_lbl_mqtt_port"
+                app:expandedHintEnabled="false"
+                app:layout_constraintTop_toBottomOf="@id/tilMqttHost">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etMqttPort"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilMqttTopic"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
@@ -145,7 +162,7 @@
                 android:layout_marginTop="16dp"
                 android:hint="@string/settings_mqtt_user_hint"
                 app:expandedHintEnabled="false"
-                app:layout_constraintTop_toBottomOf="@id/tilMqttHost">
+                app:layout_constraintTop_toBottomOf="@id/tilMqttPort">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etMqttUser"

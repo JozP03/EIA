@@ -83,6 +83,7 @@ public class DashboardViewModel extends AndroidViewModel {
                         newList.add(updatedDevice);
                         anyUpdated = true;
                     } else if (event.getType() == MqttEvent.Type.DATA) {
+                        updatedDevice.setOnline(true);
                         updateSensorData(updatedDevice, event.getSensorId(), event.getPayload());
                         newList.add(updatedDevice);
                         anyUpdated = true;
@@ -108,6 +109,7 @@ public class DashboardViewModel extends AndroidViewModel {
                     boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
                     newDevice.setOnline(isOnline);
                 } else if (event.getType() == MqttEvent.Type.DATA) {
+                    newDevice.setOnline(true);
                     updateSensorData(newDevice, event.getSensorId(), event.getPayload());
                 }
                 
@@ -474,7 +476,9 @@ public class DashboardViewModel extends AndroidViewModel {
         if (json != null) {
             Type type = new TypeToken<ArrayList<Device>>() {}.getType();
             List<Device> loadedDevices = gson.fromJson(json, type);
-            devices.setValue(loadedDevices);
+            if (loadedDevices != null) {
+                devices.setValue(loadedDevices);
+            }
         }
     }
 
@@ -593,6 +597,13 @@ public class DashboardViewModel extends AndroidViewModel {
 
     public void initMqttConnection() {
         MqttRepository.getInstance().connectToBroker();
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        // Opcjonalnie: MqttRepository.getInstance().getEventStream().removeObserver(...)
+        // Ale ponieważ używamy go w Activity/Fragment scope zwykle, tu zostawiamy czysto.
     }
 
 }
