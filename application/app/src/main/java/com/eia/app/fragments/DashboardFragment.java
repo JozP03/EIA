@@ -153,7 +153,11 @@ public class DashboardFragment extends Fragment {
 
                 progressBar.setVisibility(View.VISIBLE);
 
-                String fullPrompt = viewModel.getAiSystemContext() + "\n\nPytanie użytkownika: " + text;
+                viewModel.addToChatHistory(new ChatMessage(text, ChatMessage.Type.USER));
+
+                String fullPrompt = viewModel.getAiSystemContext() + 
+                                  viewModel.getFormattedChatHistory() + 
+                                  "\nNowe pytanie użytkownika: " + text;
 
                 AiProvider provider = AiFactory.getProvider(requireContext());
                 provider.askAi(fullPrompt, new AiProvider.AiCallback() {
@@ -164,6 +168,8 @@ public class DashboardFragment extends Fragment {
                                 progressBar.setVisibility(View.GONE);
 
                                 String cleanText = viewModel.handleAiResponseAndGetCleanText("global", response);
+                                
+                                viewModel.addToChatHistory(new ChatMessage(cleanText, ChatMessage.Type.AI));
                                 
                                 chatAdapter.addMessage(new ChatMessage(cleanText, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);

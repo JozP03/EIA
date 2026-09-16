@@ -15,6 +15,7 @@ import androidx.lifecycle.MutableLiveData;
 import com.eia.app.R;
 import com.eia.app.db.AppDatabase;
 import com.eia.app.db.SensorReading;
+import com.eia.app.models.ChatMessage;
 import com.eia.app.models.Device;
 import com.eia.app.models.MqttEvent;
 import com.eia.app.models.Sensor;
@@ -41,6 +42,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final AppDatabase db;
     private final Map<String, Long> lastSyncTimes = new HashMap<>();
     private final MutableLiveData<Boolean> isSyncing = new MutableLiveData<>(false);
+    private final List<ChatMessage> chatHistory = new ArrayList<>();
 
 
     public DashboardViewModel(@NonNull Application application) {
@@ -599,11 +601,31 @@ public class DashboardViewModel extends AndroidViewModel {
         MqttRepository.getInstance().connectToBroker();
     }
 
+    public void addToChatHistory(ChatMessage message) {
+        chatHistory.add(message);
+        if (chatHistory.size() > 10) {
+            chatHistory.remove(0);
+        }
+    }
+
+    public String getFormattedChatHistory() {
+        if (chatHistory.isEmpty()) return "";
+        
+        StringBuilder sb = new StringBuilder("\nHISTORIA OSTATNIEJ ROZMOWY:\n");
+        for (ChatMessage msg : chatHistory) {
+            String role = (msg.getType() == ChatMessage.Type.USER) ? "Użytkownik" : "Asystent";
+            sb.append(role).append(": ").append(msg.getText()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public void clearChatHistory() {
+        chatHistory.clear();
+    }
+
     @Override
     protected void onCleared() {
         super.onCleared();
-        // Opcjonalnie: MqttRepository.getInstance().getEventStream().removeObserver(...)
-        // Ale ponieważ używamy go w Activity/Fragment scope zwykle, tu zostawiamy czysto.
     }
 
 }

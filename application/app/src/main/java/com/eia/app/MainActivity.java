@@ -43,11 +43,18 @@ public class MainActivity extends AppCompatActivity {
             
             SharedPreferences prefs = getSharedPreferences("EIA_PREFS", MODE_PRIVATE);
             String mqttHost = prefs.getString("mqtt_host", "broker.hivemq.com");
+            String mqttPortStr = prefs.getString("mqtt_port", "8883");
+            int mqttPort;
+            try {
+                mqttPort = Integer.parseInt(mqttPortStr);
+            } catch (NumberFormatException e) {
+                mqttPort = 8883;
+            }
             String mqttUser = prefs.getString("mqtt_user", "");
             String mqttPass = prefs.getString("mqtt_pass", "");
             
             MqttRepository mqtt = MqttRepository.getInstance();
-            mqtt.configure(mqttHost, mqttUser, mqttPass);
+            mqtt.configure(mqttHost, mqttPort, mqttUser, mqttPass);
 
             boolean isConfigured = prefs.getBoolean("is_configured", false);
 
