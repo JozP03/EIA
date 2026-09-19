@@ -14,8 +14,6 @@
 #define I2C_SDA 2
 #define I2C_SCL 3
 
-bool modeI2C = true;
-
 Adafruit_BMP280 bmp;
 Adafruit_AHTX0 aht;
 Preferences preferences;
@@ -44,9 +42,9 @@ BLEAdvertising *pAdvertising;
 BLEScan *pBLEScan;
 
 String uniqueSensorName = "";
-unsigned long lastSendTime = 0;
-unsigned long sendInterval = 60000; // domyślnie 1 min (60000 ms)
+unsigned long sendInterval = 60000; // default 1 min
 float tempOffset = 0.0;
+bool modeI2C = true; // mode I2C (true) or EXT (false)
 
 bool checkI2C(uint8_t address) {
   Wire.beginTransmission(address);
@@ -68,10 +66,10 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
             String intervalString = uniqueSensorName + ";Interval:";
             String resetString = uniqueSensorName + ";Reset";
             String resetString2 = uniqueSensorName + ";ResetToDefault";
-            String calibrateString = uniqueSensorName + ";Calibrate";
-            String modeString = uniqueSensorName + ";Mode:";
+            String calibrateString = uniqueSensorName + ";Calibrate:";
+            String modeString = uniqueSensorName + ";Mode:"; 
             
-            // interwal wysyłania danych
+            // 1. interval
             if (strncmp(dataPtr, intervalString.c_str(), intervalString.length()) == 0) {
                 int newIntervalSec = String(dataPtr + intervalString.length()).toInt();
                 
@@ -85,21 +83,20 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
                     Serial.printf("\n[BLE COMMAND] Zmieniono interwal na: %d sekund\n", newIntervalSec);
                 }
             }
-            // reset urządzenia
+            // 2. reset
             else if (strncmp(dataPtr, resetString.c_str(), resetString.length()) == 0) {
                 Serial.println("\n[BLE COMMAND] Ponowne uruchamianie...");
                 delay(500);
                 ESP.restart();
             }
-            // reset do ustawień domyślnych
+            // 3. default reset
             else if (strncmp(dataPtr, resetString2.c_str(), resetString2.length()) == 0) {
                 Serial.println("\n[BLE COMMAND] Resetowanie do ustawień domyślnych...");
                 preferences.clear();
-                preferences.end();
                 delay(500);
                 ESP.restart();
             }
-            // kalibracja temperatury
+            // 4. calibration
             else if (strncmp(dataPtr, calibrateString.c_str(), calibrateString.length()) == 0) {
                 float newOffset = String(dataPtr + calibrateString.length()).toFloat(); 
                 
@@ -109,9 +106,9 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
                 preferences.putFloat("tempOffset", tempOffset);
                 preferences.end();
 
-                Serial.println("\n[BLE COMMAND] Kalibracja temperatury...");
+                Serial.printf("\n[BLE COMMAND] Kalibracja temperatury. Nowy offset: %.2f\n", tempOffset);
             }
-            // zmiana trybu pracy urządzenia
+            // 5. mode
             else if (strncmp(dataPtr, modeString.c_str(), modeString.length()) == 0) {
                 String newMode = String(dataPtr + modeString.length());
                 
@@ -141,21 +138,18 @@ void setup() {
   tempOffset = preferences.getFloat("tempOffset", 0.0);
   modeI2C = preferences.getBool("modeI2C", true);
   preferences.end();
-  Serial.printf("Aktualny interwal wysylania: %lu ms\n", sendInterval);
+  
+  Serial.printf("\n--- WYBUDZENIE ---\nAktualny interwal: %lu ms, Offset: %.2f\n", sendInterval, tempOffset);
 
   Wire.begin(I2C_SDA, I2C_SCL);
 
   for (int i = 0; i < numSensors; i++) {
     if (checkI2C(mySensors[i].address)) {
-      Serial.println("Wykryto: " + mySensors[i].name);
-
       if (mySensors[i].address == 0x38) {
         mySensors[i].isActive = aht.begin(&Wire);
       } else if (mySensors[i].address == 0x77) {
         mySensors[i].isActive = bmp.begin(0x77);
       }
-    } else {
-      Serial.println("Brak: " + mySensors[i].name);
     }
   }
 
@@ -163,8 +157,7 @@ void setup() {
   
   pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->setScanResponse(true);
-  pAdvertising->start();
-
+  
   pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setActiveScan(true); 
@@ -173,69 +166,75 @@ void setup() {
 }
 
 void loop() {
-  unsigned long currentTime = millis();
-
-  if (currentTime - lastSendTime >= sendInterval) {
-    lastSendTime = currentTime;
-
-    for (int i = 0; i < numSensors; i++) {
-      if (mySensors[i].isActive) {
-        if (mySensors[i].address == 0x38) { // AHT
-          sensors_event_t humidity, temp;
-          aht.getEvent(&humidity, &temp);
-          mySensors[i].metrics[0].value = temp.temperature + tempOffset;
-          mySensors[i].metrics[1].value = humidity.relative_humidity;
-        } else if (mySensors[i].address == 0x77) { // BMP
-          mySensors[i].metrics[0].value = bmp.readPressure() / 100.0F;
-        }
+  for (int i = 0; i < numSensors; i++) {
+    if (mySensors[i].isActive) {
+      if (mySensors[i].address == 0x38) { // AHT
+        sensors_event_t humidity, temp;
+        aht.getEvent(&humidity, &temp);
+        mySensors[i].metrics[0].value = temp.temperature + tempOffset;
+        mySensors[i].metrics[1].value = humidity.relative_humidity;
+      } else if (mySensors[i].address == 0x77) { // BMP
+        mySensors[i].metrics[0].value = bmp.readPressure() / 100.0F;
       }
     }
-
-String payload = uniqueSensorName;
-    bool anyData = false;
-
-    if (modeI2C) {
-        // --- Default: I2C (AHT20 / BMP280) ---
-        for (int i = 0; i < numSensors; i++) {
-            if (mySensors[i].isActive) {
-                for (int m = 0; m < mySensors[i].metricCount; m++) {
-                    payload += ";" + mySensors[i].metrics[m].prefix + ":" +
-                               String(mySensors[i].metrics[m].value, mySensors[i].metrics[m].decimals);
-                    anyData = true;
-                }
-            }
-        }
-    } else {
-        // --- Simple Mode: Analog/Digital pin 0 ---
-        int extVal = analogRead(0);
-        payload += ";EXT:" + String(extVal);
-        anyData = true;
-    }
-
-    if (!anyData) {
-      payload += ";ERR:NoSensors";
-    }
-
-    pAdvertising->stop();
-
-    BLEAdvertisementData advertisementData;
-    advertisementData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC |
-                               ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
-    advertisementData.setManufacturerData(payload.c_str());
-
-    BLEAdvertisementData scanResponseData;
-    scanResponseData.setName(uniqueSensorName.c_str());
-
-    pAdvertising->setAdvertisementData(advertisementData);
-    pAdvertising->setScanResponseData(scanResponseData);
-
-    pAdvertising->start();
-
-    Serial.println("Rozgłoszono: " + payload);
   }
 
-  pBLEScan->start(1, false); 
+String payload = uniqueSensorName;
+  bool anyData = false;
+
+  if (modeI2C) {
+      // --- I2C Mode ---
+      for (int i = 0; i < numSensors; i++) {
+          if (mySensors[i].isActive) {
+              for (int m = 0; m < mySensors[i].metricCount; m++) {
+                  payload += ";" + mySensors[i].metrics[m].prefix + ":" +
+                             String(mySensors[i].metrics[m].value, mySensors[i].metrics[m].decimals);
+                  anyData = true;
+              }
+          }
+      }
+  } else {
+      // --- EXT Mode ---
+      int extVal = analogRead(0);
+      payload += ";EXT:" + String(extVal);
+      anyData = true;
+  }
+
+  if (!anyData) {
+    payload += ";ERR:NoSensors";
+  }
+
+  BLEAdvertisementData advertisementData;
+  advertisementData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
+  advertisementData.setManufacturerData(payload.c_str());
+
+  BLEAdvertisementData scanResponseData;
+  scanResponseData.setName(uniqueSensorName.c_str());
+
+  pAdvertising->setAdvertisementData(advertisementData);
+  pAdvertising->setScanResponseData(scanResponseData);
+
+  pAdvertising->start();
+  Serial.println("Rozgloszono: " + payload);
+  delay(2000);
+  pAdvertising->stop();
+
+  Serial.println("Rozpoczynam nasluch na 5 sekund...");
+  pBLEScan->start(5, false);
   pBLEScan->clearResults();
-  
-  delay(10);
+
+  unsigned long activeTime = millis();
+  uint64_t sleepTimeMs = 0;
+
+  if (sendInterval > activeTime) {
+      sleepTimeMs = sendInterval - activeTime;
+  } else {
+      sleepTimeMs = 5000; 
+  }
+
+  Serial.printf("Ide spac na %llu ms...\n", sleepTimeMs);
+  Serial.flush();
+
+  esp_sleep_enable_timer_wakeup(sleepTimeMs * 1000ULL);
+  esp_deep_sleep_start();
 }

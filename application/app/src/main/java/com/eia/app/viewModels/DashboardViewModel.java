@@ -11,6 +11,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Observer;
 
 import com.eia.app.R;
 import com.eia.app.db.AppDatabase;
@@ -43,6 +44,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final Map<String, Long> lastSyncTimes = new HashMap<>();
     private final MutableLiveData<Boolean> isSyncing = new MutableLiveData<>(false);
     private final List<ChatMessage> chatHistory = new ArrayList<>();
+    private final Observer<MqttEvent> mqttObserver = this::handleMqttEvent;
 
 
     public DashboardViewModel(@NonNull Application application) {
@@ -55,13 +57,16 @@ public class DashboardViewModel extends AndroidViewModel {
     }
 
     private void observeMqttEvents() {
-        MqttRepository.getInstance().getEventStream().observeForever(event -> {
-            if (event == null || event.getDeviceId() == null) return;
-            
-            Log.d(TAG, "Nowy event MQTT: " + event.getDeviceId() + " [" + event.getType() + "]");
+        MqttRepository.getInstance().getEventStream().observeForever(mqttObserver);
+    }
 
-            List<Device> currentList = devices.getValue();
-            if (currentList == null) return;
+    private void handleMqttEvent(MqttEvent event) {
+        if (event == null || event.getDeviceId() == null) return;
+
+        Log.d(TAG, "Nowy event MQTT: " + event.getDeviceId() + " [" + event.getType() + "]");
+
+        List<Device> currentList = devices.getValue();
+        if (currentList == null) return;
 
             List<Device> newList = new ArrayList<>();
             boolean deviceFound = false;
@@ -123,7 +128,6 @@ public class DashboardViewModel extends AndroidViewModel {
                 devices.setValue(newList);
                 persistDevices(newList);
             }
-        });
     }
 
     private void processHistoryMessage(Device device, String payload) {
@@ -626,6 +630,7 @@ public class DashboardViewModel extends AndroidViewModel {
     @Override
     protected void onCleared() {
         super.onCleared();
+        MqttRepository.getInstance().getEventStream().removeObserver(mqttObserver);
     }
 
 }

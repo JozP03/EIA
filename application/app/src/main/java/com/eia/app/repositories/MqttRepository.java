@@ -11,6 +11,7 @@ import com.hivemq.client.mqtt.mqtt5.Mqtt5AsyncClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5ClientBuilder;
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public class MqttRepository {
     private static final String TAG = "MqttRepository";
@@ -19,6 +20,7 @@ public class MqttRepository {
     private final MutableLiveData<MqttEvent> eventStream = new MutableLiveData<>();
 
     private String host = "";
+    private int port = 0;
     private String username = "";
     private String password = "";
     private Mqtt5AsyncClient client;
@@ -38,21 +40,41 @@ public class MqttRepository {
             Log.e(TAG, "Server host cannot be null or empty.");
             return;
         }
+
+        if (this.host.equals(host) && this.port == port && 
+            this.username.equals(username) && this.password.equals(password) && 
+            client != null) {
+            Log.d(TAG, "Konfiguracja MQTT identyczna, pomijam tworzenie klienta.");
+            return;
+        }
+
+        if (client != null) {
+            Log.d(TAG, "Zamykanie starego klienta MQTT przed rekonfiguracją...");
+            client.disconnect();
+        }
+
         this.host = host;
+        this.port = port;
         this.username = username;
         this.password = password;
 
         Mqtt5ClientBuilder builder = MqttClient.builder()
                 .useMqttVersion5()
-                .identifier("app" + UUID.randomUUID().toString())
+                .identifier("app-" + UUID.randomUUID().toString().substring(0, 8))
                 .serverHost(host)
                 .serverPort(port)
-                .automaticReconnectWithDefaultConfig()
+                .automaticReconnect()
+                    .initialDelay(1, TimeUnit.SECONDS)
+                    .maxDelay(30, TimeUnit.SECONDS)
+                    .applyAutomaticReconnect()
                 .addConnectedListener(context -> {
                     Log.d(TAG, "Połączono (lub połączono ponownie)");
                     subscribeTopics();
                 })
-                .addDisconnectedListener(context -> Log.w(TAG, "Rozłączono: " + (context.getCause() != null ? context.getCause().getMessage() : "brak powodu")));
+                .addDisconnectedListener(context -> {
+                    String reason = (context.getCause() != null ? context.getCause().getMessage() : "brak powodu");
+                    Log.w(TAG, "Rozłączono: " + reason);
+                });
 
         if (port == 8883) {
             client = builder.sslWithDefaultConfig().buildAsync();
@@ -72,17 +94,21 @@ public class MqttRepository {
             return;
         }
 
-        client.connectWith()
-                .simpleAuth()
-                .username(username)
-                .password(password.getBytes())
-                .applySimpleAuth()
-                .send()
+        var connectBuilder = client.connectWith();
+        
+        if (username != null && !username.isEmpty()) {
+            connectBuilder.simpleAuth()
+                    .username(username)
+                    .password(password.getBytes())
+                    .applySimpleAuth();
+        }
+
+        connectBuilder.send()
                 .whenComplete(((mqtt5ConnAck, throwable) -> {
                     if(throwable != null){
                         Log.e(TAG,"Błąd połączenia z MQTT: " + throwable.getMessage());
                     }else {
-                        Log.d(TAG,"Wysłano żądanie połączenia MQTT");
+                        Log.d(TAG,"Wysłano żądanie połączenia MQTT: " + mqtt5ConnAck.getReasonCode());
                     }
                 }));
     }
