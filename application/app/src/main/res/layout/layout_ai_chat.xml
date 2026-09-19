@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:layout_weight="1"
-            android:text="Asystent"
+            android:text="@string/ai_asistent_title"
             android:textColor="@color/text_main"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -43,6 +43,7 @@
             android:layout_height="32dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:contentDescription="@string/back_button_description"
             app:tint="@color/text_muted" />
     </LinearLayout>
 
@@ -80,11 +81,13 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:background="@android:color/transparent"
-            android:hint="Zadaj pytanie..."
+            android:hint="@string/ai_hint"
             android:maxLines="4"
             android:padding="12dp"
             android:textColor="@color/text_main"
-            android:textSize="15sp" />
+            android:textSize="15sp"
+            android:autofillHints=""
+            android:inputType="textShortMessage" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSendMessage"

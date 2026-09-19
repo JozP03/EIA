@@ -5,19 +5,25 @@ import android.os.Bundle;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.graphics.Insets;
+import androidx.core.view.GravityCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.navigation.NavController;
 import androidx.navigation.NavGraph;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.eia.app.repositories.MqttRepository;
+import com.google.android.material.navigation.NavigationView;
 
 public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+
         EdgeToEdge.enable(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -34,15 +40,21 @@ public class MainActivity extends AppCompatActivity {
             NavController navController = navHostFragment.getNavController();
 
             NavGraph navGraph = navController.getNavInflater().inflate(R.navigation.nav_graph);
-
+            
             SharedPreferences prefs = getSharedPreferences("EIA_PREFS", MODE_PRIVATE);
-
             String mqttHost = prefs.getString("mqtt_host", "broker.hivemq.com");
+            String mqttPortStr = prefs.getString("mqtt_port", "8883");
+            int mqttPort;
+            try {
+                mqttPort = Integer.parseInt(mqttPortStr);
+            } catch (NumberFormatException e) {
+                mqttPort = 8883;
+            }
             String mqttUser = prefs.getString("mqtt_user", "");
             String mqttPass = prefs.getString("mqtt_pass", "");
             
             MqttRepository mqtt = MqttRepository.getInstance();
-            mqtt.configure(mqttHost, mqttUser, mqttPass);
+            mqtt.configure(mqttHost, mqttPort, mqttUser, mqttPass);
 
             boolean isConfigured = prefs.getBoolean("is_configured", false);
 
@@ -52,7 +64,61 @@ public class MainActivity extends AppCompatActivity {
                 navGraph.setStartDestination(R.id.connectionFragment);
             }
 
-            navController.setGraph(navGraph);
+            if (savedInstanceState == null) {
+                navController.setGraph(navGraph);
+            }
+
+            setupNavigation(navController);
+        }
+    }
+
+    private void setupNavigation(NavController navController) {
+        DrawerLayout drawer = findViewById(R.id.main_drawer_layout);
+        NavigationView navigationView = findViewById(R.id.nav_view);
+
+        navigationView.setNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.dashboardFragment) {
+                navController.navigate(R.id.dashboardFragment);
+            } else if (id == R.id.settingsFragment) {
+                navController.navigate(R.id.settingsFragment);
+            }
+            drawer.closeDrawers();
+            return true;
+        });
+
+        // Obsługa przycisku "O aplikacji"
+        findViewById(R.id.btnNavAbout).setOnClickListener(v -> {
+            navController.navigate(R.id.aboutFragment);
+            drawer.closeDrawers();
+        });
+
+        // Blokowanie menu
+        navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
+            int id = destination.getId();
+
+            if (id == R.id.dashboardFragment || id == R.id.settingsFragment) {
+                navigationView.setCheckedItem(id);
+            } else {
+                int size = navigationView.getMenu().size();
+                for (int i = 0; i < size; i++) {
+                    navigationView.getMenu().getItem(i).setChecked(false);
+                }
+            }
+
+            if (id == R.id.connectionFragment || id == R.id.scanFragment || 
+                id == R.id.configFragment || id == R.id.deviceSetupFragment) {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED);
+            } else {
+                drawer.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED);
+            }
+        });
+    }
+
+    public void openDrawer() {
+        DrawerLayout drawer = findViewById(R.id.main_drawer_layout);
+        if (drawer != null) {
+            drawer.openDrawer(GravityCompat.START);
         }
     }
 }

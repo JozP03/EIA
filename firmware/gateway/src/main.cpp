@@ -79,6 +79,16 @@ struct HistoryRecord {
     char payloadData[32];
 };
 
+struct MailboxCommand {
+    bool hasMessage;
+    char sensorId[5];
+    char payloadRaw[32];
+};
+MailboxCommand mailbox[MAX_SENSORS];
+
+volatile bool triggerBleTransmission = false;
+char activeTxPayload[64] = {0};
+
 #define MAX_HISTORY_RECORDS 250 
 HistoryRecord historyBuffer[MAX_HISTORY_RECORDS];
 int historyIndex = 0;
@@ -140,53 +150,72 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
     if (advertisedDevice.haveManufacturerData()) {
       std::string strManufacturerData = advertisedDevice.getManufacturerData();
-      
       const char* dataPtr = strManufacturerData.c_str();
 
-      if (strncmp(dataPtr, "ESP_", 4) == 0) { 
-        const char* semiColonIndex = strchr(dataPtr, ';');
-        
-        if (semiColonIndex != nullptr) {
-          Message msg;
-          memset(&msg, 0, sizeof(Message));
-          
-          int idLen = semiColonIndex - dataPtr;
-          if (idLen > 11) idLen = 11;
-          strncpy(msg.sensorId, dataPtr, idLen);
-          
-          strncpy(msg.payloadData, semiColonIndex + 1, sizeof(msg.payloadData) - 1);
+      if (strManufacturerData.length() >= 5 && dataPtr[4] == ';') { 
 
-          bool isNewData = false;
-          bool found = false;
+        bool isOurSensor = true;
+        for (int i = 0; i < 4; i++) {
+            if (!isxdigit(dataPtr[i])) {
+                isOurSensor = false;
+                break;
+            }
+        }
 
-          for (int i = 0; i < MAX_SENSORS; i++) {
-              if (strcmp(sensorRegistry[i].id, msg.sensorId) == 0) {
-                  found = true;
-                  sensorRegistry[i].lastSeen = millis(); 
-                  
-                  if (strcmp(sensorRegistry[i].lastPayload, msg.payloadData) != 0) {
-                      snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
-                      isNewData = true;
-                  }
-                  break;
-              }
-          }
+        if (isOurSensor) {
+            Message msg;
+            memset(&msg, 0, sizeof(Message));
+            
+            const char* semiColonIndex = dataPtr + 4;
+            strncpy(msg.sensorId, dataPtr, 4);
+            
+            strncpy(msg.payloadData, semiColonIndex + 1, sizeof(msg.payloadData) - 1);
 
-          if (!found) {
-              for (int i = 0; i < MAX_SENSORS; i++) {
-                  if (sensorRegistry[i].id[0] == '\0') {
-                      snprintf(sensorRegistry[i].id, sizeof(sensorRegistry[i].id), "%s", msg.sensorId);
-                      snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
-                      sensorRegistry[i].lastSeen = millis();
-                      isNewData = true;
-                      break;
-                  }
-              }
-          }
+            bool isNewData = false;
+            bool found = false;
 
-          if (isNewData) {
-            xQueueSend(valueQueue, &msg, 0);
-          }
+            for (int i = 0; i < MAX_SENSORS; i++) {
+                if (strcmp(sensorRegistry[i].id, msg.sensorId) == 0) {
+                    found = true;
+                    sensorRegistry[i].lastSeen = millis(); 
+                    
+                    if (strcmp(sensorRegistry[i].lastPayload, msg.payloadData) != 0) {
+                        snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
+                        isNewData = true;
+                    }
+                    break;
+                }
+            }
+
+            if (!found) {
+                for (int i = 0; i < MAX_SENSORS; i++) {
+                    if (sensorRegistry[i].id[0] == '\0') {
+                        snprintf(sensorRegistry[i].id, sizeof(sensorRegistry[i].id), "%s", msg.sensorId);
+                        snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
+                        sensorRegistry[i].lastSeen = millis();
+                        isNewData = true;
+                        break;
+                    }
+                }
+            }
+
+            if (isNewData) {
+              xQueueSend(valueQueue, &msg, 0);
+            }
+
+
+            for (int i = 0; i < MAX_SENSORS; i++) {
+                if (mailbox[i].hasMessage && strcmp(mailbox[i].sensorId, msg.sensorId) == 0) {
+                    if (!triggerBleTransmission) { 
+                        snprintf(activeTxPayload, sizeof(activeTxPayload), "%s;%s", mailbox[i].sensorId, mailbox[i].payloadRaw);
+                        triggerBleTransmission = true;
+                        mailbox[i].hasMessage = false; 
+                        
+                        if (Serial) Serial.printf("MAILBOX: Czujnik %s sie obudzil! Wyzwalam wysylanie: %s\n", msg.sensorId, activeTxPayload);
+                    }
+                    break;
+                }
+            }
         }
       }
     }
@@ -273,37 +302,32 @@ void loop() {
   delay(100);
 }
 
-// --- TASKS ---
+// --- TASKs ---
 void bleTask(void *pvParameters) {
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     
     while (true) {
-        if (pendingBleConfig) {
-            pBLEScan->stop();
-            
+        if (triggerBleTransmission) {
             BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
-            std::string strServiceData = "";
-            
-            char payload[32];
-            snprintf(payload, sizeof(payload), "%s;%s", configTargetId, configPayloadRaw);
-            strServiceData += payload;
+            std::string strServiceData = activeTxPayload;
             oAdvertisementData.setManufacturerData(strServiceData);
             
             pAdvertising->setAdvertisementData(oAdvertisementData);
             pAdvertising->start();
             
-            if (Serial) Serial.printf("Rozglaszam: %s\n", payload);
+            if (Serial) Serial.printf("BLE_TX: Rozglaszam komende z bufora: %s\n", activeTxPayload);
             
-            vTaskDelay(pdMS_TO_TICKS(5000));
+            vTaskDelay(pdMS_TO_TICKS(3000));
             
             pAdvertising->stop();
-            pendingBleConfig = false;
-            if (Serial) Serial.println("Koniec nadawania.");
+            triggerBleTransmission = false;
+            
+            if (Serial) Serial.println("BLE_TX: Wyslano, wracam do nasluchiwania.");
             
         } else {
-            pBLEScan->start(3, true);
+            pBLEScan->start(1, false); 
             pBLEScan->clearResults(); 
-            vTaskDelay(pdMS_TO_TICKS(100));
+            vTaskDelay(pdMS_TO_TICKS(10));
         }
     }
 }
@@ -437,19 +461,23 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         triggerHistorySend = true;
     }
 
-    else if (topicStr.startsWith(gateId + "/") && topicStr.endsWith("/config") && !topicStr.equals(gateId + "/config")) {
+else if (topicStr.startsWith(gateId + "/") && topicStr.endsWith("/config") && !topicStr.equals(gateId + "/config")) {
         
         int firstSlash = topicStr.indexOf('/');
         int lastSlash = topicStr.lastIndexOf('/');
         String targetId = topicStr.substring(firstSlash + 1, lastSlash);
 
-        strncpy(configTargetId, targetId.c_str(), sizeof(configTargetId) - 1);
-        strncpy(configPayloadRaw, payloadStr.c_str(), sizeof(configPayloadRaw) - 1);
-        configPayloadRaw[sizeof(configPayloadRaw) - 1] = '\0';
-        
-        pendingBleConfig = true;
-        
-        if (Serial) Serial.printf("przeslanie surowej wiadomosci do %s: %s\n", configTargetId, configPayloadRaw);
+        for (int i = 0; i < MAX_SENSORS; i++) {
+            if (!mailbox[i].hasMessage || strcmp(mailbox[i].sensorId, targetId.c_str()) == 0) {
+                strncpy(mailbox[i].sensorId, targetId.c_str(), 4);
+                mailbox[i].sensorId[4] = '\0';
+                strncpy(mailbox[i].payloadRaw, payloadStr.c_str(), sizeof(mailbox[i].payloadRaw) - 1);
+                mailbox[i].hasMessage = true;
+                
+                if (Serial) Serial.printf("MAILBOX: Zapisano komende [%s] dla czujnika %s\n", mailbox[i].payloadRaw, mailbox[i].sensorId);
+                break;
+            }
+        }
     }
 }
 

@@ -3,14 +3,18 @@ package com.eia.app.db;
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
 import androidx.room.Insert;
+import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
 import java.util.List;
 
 @Dao
 public interface ReadingDao {
-    @Insert(onConflict = androidx.room.OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     void insert(SensorReading reading);
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    void insertAll(List<SensorReading> readings);
 
     @Query("SELECT * FROM sensor_readings WHERE sensorId = :sensorId ORDER BY timestamp ASC")
     LiveData<List<SensorReading>> getReadingsForSensor(String sensorId);

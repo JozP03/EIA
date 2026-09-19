@@ -1,5 +1,7 @@
 package com.eia.app.fragments;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 
 import java.util.ArrayList;
@@ -7,12 +9,15 @@ import java.util.List;
 import java.util.Locale;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.NavigationUI;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -21,6 +26,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.eia.app.MainActivity;
 import com.eia.app.R;
 import com.eia.app.adapters.DeviceAdapter;
 import com.eia.app.adapters.ChatAdapter;
@@ -65,23 +71,8 @@ public class DashboardFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.dashboard_nav_view);
         NavController navController = Navigation.findNavController(view);
         
-        navigationView.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
-            
-            if (id == R.id.settingsFragment) {
-                navController.navigate(R.id.settingsFragment);
-            }
-            
-            if (drawer != null) {
-                drawer.closeDrawers();
-            }
-            return true;
-        });
-
         // przycisk +
         view.findViewById(R.id.btnAddDevice).setOnClickListener(v -> {
             navController.navigate(R.id.action_dashboardFragment_to_connectionFragment);
@@ -89,28 +80,15 @@ public class DashboardFragment extends Fragment {
 
         //panel boczny
         view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
-            if (drawer != null) {
-                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).openDrawer();
             }
         });
 
-        // przysk o aplikacji
-        View navAbout = view.findViewById(R.id.btnNavAbout);
-        if (navAbout != null) {
-            navAbout.setOnClickListener(v -> {
-                androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.dashboard_drawer_layout);
-                if (drawer != null) {
-                    drawer.closeDrawers();
-                }
-                navController.navigate(R.id.aboutFragment);
-            });
-        }
-
-        androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvDeviceList);
+        RecyclerView rv = view.findViewById(R.id.rvDeviceList);
         TextView tvEmpty = view.findViewById(R.id.tvEmptyList);
 
-        com.eia.app.adapters.DeviceAdapter adapter = new com.eia.app.adapters.DeviceAdapter(device -> {
+        DeviceAdapter adapter = new DeviceAdapter(device -> {
             // przejście do szczegółów urządzenia
             Bundle args = new Bundle();
             args.putString("deviceId", device.getId());
@@ -119,15 +97,14 @@ public class DashboardFragment extends Fragment {
             showDeviceActions(device);
         });
 
-        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
+        rv.setLayoutManager(new LinearLayoutManager(getContext()));
         rv.setAdapter(adapter);
 
         viewModel.getDevices().observe(getViewLifecycleOwner(), newDevices -> {
             if (newDevices != null) {
-                // ListAdapter
                 adapter.submitList(new ArrayList<>(newDevices));
+                adapter.notifyDataSetChanged();
 
-                // Obsługa napisu pustej listy
                 if (newDevices.isEmpty()) {
                     tvEmpty.setVisibility(View.VISIBLE);
                     rv.setVisibility(View.GONE);
@@ -140,7 +117,7 @@ public class DashboardFragment extends Fragment {
 
         // Obsługa dymka AI
         View fabAi = view.findViewById(R.id.fabAiChat);
-        android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE);
+        SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);
         String aiKey = prefs.getString("ai_api_key", "");
         
         Log.d("DashboardFragment", "Klucz AI: [" + aiKey + "]");
@@ -176,8 +153,11 @@ public class DashboardFragment extends Fragment {
 
                 progressBar.setVisibility(View.VISIBLE);
 
-                // Budujemy pełny prompt z kontekstem
-                String fullPrompt = viewModel.getAiSystemContext() + "\n\nPytanie użytkownika: " + text;
+                viewModel.addToChatHistory(new ChatMessage(text, ChatMessage.Type.USER));
+
+                String fullPrompt = viewModel.getAiSystemContext() + 
+                                  viewModel.getFormattedChatHistory() + 
+                                  "\nNowe pytanie użytkownika: " + text;
 
                 AiProvider provider = AiFactory.getProvider(requireContext());
                 provider.askAi(fullPrompt, new AiProvider.AiCallback() {
@@ -186,9 +166,10 @@ public class DashboardFragment extends Fragment {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() -> {
                                 progressBar.setVisibility(View.GONE);
-                                
-                                // Przetwarzamy odpowiedź AI (szukamy komend)
+
                                 String cleanText = viewModel.handleAiResponseAndGetCleanText("global", response);
+                                
+                                viewModel.addToChatHistory(new ChatMessage(cleanText, ChatMessage.Type.AI));
                                 
                                 chatAdapter.addMessage(new ChatMessage(cleanText, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
@@ -201,7 +182,8 @@ public class DashboardFragment extends Fragment {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() -> {
                                 progressBar.setVisibility(View.GONE);
-                                chatAdapter.addMessage(new ChatMessage("Błąd AI: " + error, ChatMessage.Type.AI));
+                                String errorMsg = getString(R.string.ai_error_prefix, error);
+                                chatAdapter.addMessage(new ChatMessage(errorMsg, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
                             });
                         }
@@ -229,19 +211,19 @@ public class DashboardFragment extends Fragment {
                 viewModel.saveDevice(device);
                 bottomSheet.dismiss();
             } else {
-                Toast.makeText(getContext(), "Nazwa nie może być pusta!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.toast_name_empty), Toast.LENGTH_SHORT).show();
             }
         });
 
         view.findViewById(R.id.btnDeleteDevice).setOnClickListener(v -> {
-            new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Usuń urządzenie")
-                    .setMessage("Czy na pewno chcesz usunąć " + device.getName() + "?")
-                    .setPositiveButton("Usuń", (dialog, which) -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(getString(R.string.dialog_delete_device_title))
+                    .setMessage(getString(R.string.dialog_delete_device_message, device.getName()))
+                    .setPositiveButton(getString(R.string.dialog_delete_device_confirm), (dialog, which) -> {
                         viewModel.deleteDevice(device.getId());
                         bottomSheet.dismiss();
                     })
-                    .setNegativeButton("Anuluj", null)
+                    .setNegativeButton(getString(R.string.dialog_reset_cancel), null)
                     .show();
         });
 

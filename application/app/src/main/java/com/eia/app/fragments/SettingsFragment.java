@@ -1,29 +1,43 @@
 package com.eia.app.fragments;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.os.LocaleListCompat;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.NavController;
+import androidx.navigation.Navigation;
 
+import com.eia.app.MainActivity;
 import com.eia.app.R;
 import com.eia.app.repositories.MqttRepository;
 import com.eia.app.viewModels.DashboardViewModel;
+import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.util.Locale;
 import java.util.Objects;
 
 public class SettingsFragment extends Fragment {
 
-    private TextInputEditText etMqttHost, etMqttUser, etMqttPassword;
+    private TextInputEditText etMqttHost, etMqttPort, etMqttUser, etMqttPassword;
     private TextInputEditText etAiBaseUrl, etAiApiKey;
-    private android.widget.AutoCompleteTextView actvAiProvider;
+    private AutoCompleteTextView actvAiProvider, actvLanguage;
     private MqttRepository mqtt;
     private SharedPreferences prefs;
 
@@ -40,72 +54,42 @@ public class SettingsFragment extends Fragment {
         mqtt = MqttRepository.getInstance();
         prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);
 
-        // Nawigacja boczna
-        com.google.android.material.navigation.NavigationView navigationView = view.findViewById(R.id.settings_nav_view);
-        androidx.navigation.NavController navController = androidx.navigation.Navigation.findNavController(view);
-        
-        navigationView.setNavigationItemSelectedListener(item -> {
-            int id = item.getItemId();
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
-            
-            if (id == R.id.dashboardFragment) {
-                navController.navigate(R.id.dashboardFragment);
-            }
-            
-            if (drawer != null) {
-                drawer.closeDrawers();
-            }
-            return true;
-        });
-
         // Otwieranie panelu bocznego
         view.findViewById(R.id.btnMenu).setOnClickListener(v -> {
-            androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
-            if (drawer != null) {
-                drawer.openDrawer(androidx.core.view.GravityCompat.START);
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).openDrawer();
             }
         });
-
-        // Obsługa kliknięcia w "O aplikacji" na dole panelu bocznego
-        View navAbout = view.findViewById(R.id.btnNavAbout);
-        if (navAbout != null) {
-            navAbout.setOnClickListener(v -> {
-                androidx.drawerlayout.widget.DrawerLayout drawer = view.findViewById(R.id.settings_drawer_layout);
-                if (drawer != null) {
-                    drawer.closeDrawers();
-                }
-                navController.navigate(R.id.aboutFragment);
-            });
-        }
 
         //przycisk reset
         view.findViewById(R.id.btnReset).setOnClickListener(v -> {
-            new android.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Resetowanie konfiguracji")
-                    .setMessage("Czy na pewno chcesz usunąć wszystkie ustawienia i urządzenia?")
-                    .setPositiveButton("Tak", (dialog, which) -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(getString(R.string.dialog_reset_title))
+                    .setMessage(getString(R.string.dialog_reset_message))
+                    .setPositiveButton(getString(R.string.dialog_reset_yes), (dialog, which) -> {
                         // 1. Czyszczenie ustawień ogólnych i AI
-                        requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE)
+                        requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE)
                                 .edit()
                                 .clear()
                                 .apply();
 
                         // 2. Czyszczenie listy urządzeń (bramek) przez ViewModel
-                        DashboardViewModel dashboardViewModel = new androidx.lifecycle.ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
+                        DashboardViewModel dashboardViewModel = new ViewModelProvider(requireActivity()).get(DashboardViewModel.class);
                         dashboardViewModel.clearAllDevices();
 
                         // 3. Rozłączanie MQTT
                         mqtt.disconnectFromBroker();
 
                         // 4. Powrót do ekranu początkowego
-                        androidx.navigation.Navigation.findNavController(view)
+                        Navigation.findNavController(view)
                                 .navigate(R.id.connectionFragment);
                     })
-                    .setNegativeButton("Anuluj", null)
+                    .setNegativeButton(getString(R.string.dialog_reset_cancel), null)
                     .show();
         });
 
         etMqttHost = view.findViewById(R.id.etMqttHost);
+        etMqttPort = view.findViewById(R.id.etMqttPort);
         etMqttUser = view.findViewById(R.id.etMqttUser);
         etMqttPassword = view.findViewById(R.id.etMqttPassword);
 
@@ -113,16 +97,47 @@ public class SettingsFragment extends Fragment {
         etAiBaseUrl = view.findViewById(R.id.etAiBaseUrl);
         etAiApiKey = view.findViewById(R.id.etAiApiKey);
         actvAiProvider = view.findViewById(R.id.actvAiProvider);
+        actvLanguage = view.findViewById(R.id.actvLanguage);
 
         setupAiProviderSpinner();
+        setupLanguageSpinner();
         loadSettings();
 
         view.findViewById(R.id.btnSaveSettings).setOnClickListener(v -> saveSettings());
     }
 
+    private void setupLanguageSpinner() {
+        String[] languages = {getString(R.string.language_en), getString(R.string.language_pl)};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                requireContext(),
+                android.R.layout.simple_dropdown_item_1line,
+                languages
+        );
+        actvLanguage.setAdapter(adapter);
+
+        // ustawienie jezyka
+        LocaleListCompat currentLocales = AppCompatDelegate.getApplicationLocales();
+        String currentLang = currentLocales.isEmpty() ? Locale.getDefault().getLanguage() : currentLocales.get(0).getLanguage();
+        
+        if ("pl".equals(currentLang)) {
+            actvLanguage.setText(getString(R.string.language_pl), false);
+        } else {
+            actvLanguage.setText(getString(R.string.language_en), false);
+        }
+
+        actvLanguage.setOnItemClickListener((parent, v, position, id) -> {
+            String selected = (String) parent.getItemAtPosition(position);
+            String langCode = selected.equals(getString(R.string.language_pl)) ? "pl" : "en";
+            
+            AppCompatDelegate.setApplicationLocales(
+                    LocaleListCompat.forLanguageTags(langCode)
+            );
+        });
+    }
+
     private void setupAiProviderSpinner() {
         String[] providers = {"OpenAI API (ChatGPT)", "KoboldCPP", "Ollama", "LLMStudio", "Gemini API"};
-        android.widget.ArrayAdapter<String> adapter = new android.widget.ArrayAdapter<>(
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 requireContext(),
                 android.R.layout.simple_dropdown_item_1line,
                 providers
@@ -153,6 +168,7 @@ public class SettingsFragment extends Fragment {
 
     private void loadSettings() {
         etMqttHost.setText(prefs.getString("mqtt_host", "broker.hivemq.com"));
+        etMqttPort.setText(prefs.getString("mqtt_port", "8883"));
         etMqttUser.setText(prefs.getString("mqtt_user", ""));
         etMqttPassword.setText(prefs.getString("mqtt_pass", ""));
 
@@ -169,6 +185,7 @@ public class SettingsFragment extends Fragment {
 
     private void saveSettings() {
         String host = Objects.requireNonNull(etMqttHost.getText()).toString().trim();
+        String portStr = Objects.requireNonNull(etMqttPort.getText()).toString().trim();
         String user = Objects.requireNonNull(etMqttUser.getText()).toString().trim();
         String pass = Objects.requireNonNull(etMqttPassword.getText()).toString().trim();
 
@@ -180,17 +197,30 @@ public class SettingsFragment extends Fragment {
         boolean hasError = false;
 
         if (host.isEmpty()) {
-            etMqttHost.setError("Adres brokera MQTT jest wymagany");
+            etMqttHost.setError(getString(R.string.error_mqtt_host_required));
             hasError = true;
         }
 
+        int port = 8883;
+        if (portStr.isEmpty()) {
+            etMqttPort.setError("Port MQTT jest wymagany");
+            hasError = true;
+        } else {
+            try {
+                port = Integer.parseInt(portStr);
+            } catch (Exception e) {
+                etMqttPort.setError("Niepoprawny numer portu");
+                hasError = true;
+            }
+        }
+
         if (user.isEmpty()) {
-            etMqttUser.setError("Użytkownik MQTT jest wymagany");
+            etMqttUser.setError(getString(R.string.error_mqtt_user_required));
             hasError = true;
         }
 
         if (pass.isEmpty()) {
-            etMqttPassword.setError("Hasło MQTT jest wymagane");
+            etMqttPassword.setError(getString(R.string.error_mqtt_pass_required));
             hasError = true;
         }
 
@@ -200,6 +230,7 @@ public class SettingsFragment extends Fragment {
 
         prefs.edit()
                 .putString("mqtt_host", host)
+                .putString("mqtt_port", portStr)
                 .putString("mqtt_user", user)
                 .putString("mqtt_pass", pass)
                 .putString("ai_provider", aiProvider)
@@ -208,9 +239,9 @@ public class SettingsFragment extends Fragment {
                 .apply();
 
         mqtt.disconnectFromBroker();
-        mqtt.configure(host, user, pass);
+        mqtt.configure(host, port, user, pass);
         mqtt.connectToBroker();
 
-        Toast.makeText(getContext(), "Ustawienia zapisane", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getContext(), getString(R.string.toast_settings_saved), Toast.LENGTH_SHORT).show();
     }
 }

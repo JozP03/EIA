@@ -21,8 +21,8 @@
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_revert"
             android:contentDescription="@string/back_button_description"
+            android:src="@drawable/arrow_back_24px"
             app:tint="@color/text_main" />
 
     </LinearLayout>
@@ -31,7 +31,7 @@
         android:id="@+id/tvTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Wybierz sieć Wi-Fi"
+        android:text="@string/scan_title"
         android:textColor="@color/text_main"
         android:textSize="32sp"
         android:textStyle="bold"
@@ -43,7 +43,7 @@
         android:id="@+id/tvSubtitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Dostępne sieci w zasięgu urządzenia pomiarowego"
+        android:text="@string/scan_subtitle"
         android:textColor="@color/text_muted"
         android:textSize="14sp"
         android:paddingHorizontal="24dp"
@@ -65,27 +65,27 @@
             android:layout_height="48dp"
             android:layout_weight="1"
             android:autofillHints=""
-            android:hint="Szukaj sieci..."
-            android:textColorHint="@color/text_muted"
-            android:textColor="@color/text_main"
-            android:textSize="14sp"
-            android:paddingHorizontal="16dp"
-            android:drawableStart="@android:drawable/ic_menu_search"
+            android:drawableStart="@drawable/search_24px"
             android:drawablePadding="8dp"
-            android:inputType="text" />
+            android:hint="@string/scan_hint"
+            android:inputType="text"
+            android:paddingHorizontal="16dp"
+            android:textColor="@color/text_main"
+            android:textColorHint="@color/text_muted"
+            android:textSize="14sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRefresh"
             android:layout_width="wrap_content"
             android:layout_height="48dp"
             android:layout_marginStart="12dp"
-            android:text="ODŚWIEŻ"
+            android:text="@string/scan_btn_refresh"
+            android:textColor="@color/white_bg"
             android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="@color/white_bg"
-            app:backgroundTint="#0F172A"
+            app:backgroundTint="@color/black_main"
             app:cornerRadius="6dp"
-            app:icon="@android:drawable/stat_notify_sync"
+            app:icon="@drawable/refresh_24px"
             app:iconTint="@color/white_bg" />
     </LinearLayout>
 
@@ -131,7 +131,7 @@
                 android:layout_height="40dp"
                 app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:cardBackgroundColor="#E0F2FE"
+                app:cardBackgroundColor="@color/accent_blue_subtle"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent">
 
@@ -148,7 +148,7 @@
                 android:id="@+id/tvHelpTitle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Nie widzisz swojej sieci?"
+                android:text="@string/scan_help_title"
                 android:textColor="@color/text_main"
                 android:textSize="16sp"
                 android:textStyle="bold"
@@ -161,7 +161,7 @@
                 android:id="@+id/tvHelpDesc"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="Upewnij się, że router nadaje w paśmie 2.4GHz."
+                android:text="@string/scan_help_desc"
                 android:textColor="@color/text_muted"
                 android:textSize="13sp"
                 android:layout_marginStart="12dp"
@@ -175,7 +175,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="48dp"
                 android:layout_marginTop="16dp"
-                android:text="KONFIGURACJA RĘCZNA"
+                android:text="@string/scan_btn_manual"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textColor="@color/text_main"

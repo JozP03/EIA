@@ -3,23 +3,33 @@ package com.eia.app.viewModels;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.Observer;
 
+import com.eia.app.R;
+import com.eia.app.db.AppDatabase;
+import com.eia.app.db.SensorReading;
+import com.eia.app.models.ChatMessage;
 import com.eia.app.models.Device;
 import com.eia.app.models.MqttEvent;
 import com.eia.app.models.Sensor;
+import com.eia.app.models.SensorMetadata;
 import com.eia.app.repositories.MqttRepository;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DashboardViewModel extends AndroidViewModel {
 
@@ -30,27 +40,33 @@ public class DashboardViewModel extends AndroidViewModel {
     private final MutableLiveData<List<Device>> devices = new MutableLiveData<>(new ArrayList<>());
     private final Gson gson = new Gson();
     private final SharedPreferences prefs;
-    private final com.eia.app.db.AppDatabase db;
-    private final java.util.Map<String, Long> lastSyncTimes = new java.util.HashMap<>();
+    private final AppDatabase db;
+    private final Map<String, Long> lastSyncTimes = new HashMap<>();
+    private final MutableLiveData<Boolean> isSyncing = new MutableLiveData<>(false);
+    private final List<ChatMessage> chatHistory = new ArrayList<>();
+    private final Observer<MqttEvent> mqttObserver = this::handleMqttEvent;
 
 
     public DashboardViewModel(@NonNull Application application) {
         super(application);
         prefs = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        db = com.eia.app.db.AppDatabase.getDatabase(application);
+        db = AppDatabase.getDatabase(application);
         loadDevices();
         observeMqttEvents();
         cleanOldData();
     }
 
     private void observeMqttEvents() {
-        MqttRepository.getInstance().getEventStream().observeForever(event -> {
-            if (event == null || event.getDeviceId() == null) return;
-            
-            Log.d(TAG, "Nowy event MQTT: " + event.getDeviceId() + " [" + event.getType() + "]");
+        MqttRepository.getInstance().getEventStream().observeForever(mqttObserver);
+    }
 
-            List<Device> currentList = devices.getValue();
-            if (currentList == null) return;
+    private void handleMqttEvent(MqttEvent event) {
+        if (event == null || event.getDeviceId() == null) return;
+
+        Log.d(TAG, "Nowy event MQTT: " + event.getDeviceId() + " [" + event.getType() + "]");
+
+        List<Device> currentList = devices.getValue();
+        if (currentList == null) return;
 
             List<Device> newList = new ArrayList<>();
             boolean deviceFound = false;
@@ -74,6 +90,7 @@ public class DashboardViewModel extends AndroidViewModel {
                         newList.add(updatedDevice);
                         anyUpdated = true;
                     } else if (event.getType() == MqttEvent.Type.DATA) {
+                        updatedDevice.setOnline(true);
                         updateSensorData(updatedDevice, event.getSensorId(), event.getPayload());
                         newList.add(updatedDevice);
                         anyUpdated = true;
@@ -92,12 +109,14 @@ public class DashboardViewModel extends AndroidViewModel {
             //jeśli urządzenia nie ma na liście
             if (!deviceFound && currentList.size() < 5) {
                 Log.d(TAG, "new device: " + event.getDeviceId());
-                Device newDevice = new Device(event.getDeviceId(), "Bramka " + event.getDeviceId());
+                String defaultName = getApplication().getString(R.string.gateway_default_name, event.getDeviceId());
+                Device newDevice = new Device(event.getDeviceId(), defaultName);
                 
                 if (event.getType() == MqttEvent.Type.STATUS) {
                     boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
                     newDevice.setOnline(isOnline);
                 } else if (event.getType() == MqttEvent.Type.DATA) {
+                    newDevice.setOnline(true);
                     updateSensorData(newDevice, event.getSensorId(), event.getPayload());
                 }
                 
@@ -109,12 +128,12 @@ public class DashboardViewModel extends AndroidViewModel {
                 devices.setValue(newList);
                 persistDevices(newList);
             }
-        });
     }
 
     private void processHistoryMessage(Device device, String payload) {
         if (payload == null || payload.equalsIgnoreCase("EOF")) {
             Log.d(TAG, "Koniec przesyłania historii (EOF)");
+            isSyncing.postValue(false);
             return;
         }
 
@@ -131,6 +150,8 @@ public class DashboardViewModel extends AndroidViewModel {
                 device.setSensorList(sensors);
             }
 
+            List<SensorReading> readingsToInsert = new ArrayList<>();
+
             boolean firstInMessage = true;
             for (int i = 2; i < parts.length; i++) {
                 String measure = parts[i].trim();
@@ -142,7 +163,7 @@ public class DashboardViewModel extends AndroidViewModel {
                     if (valStr.isEmpty()) continue;
 
                     float value = Float.parseFloat(valStr);
-                    String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
+                    String unit = SensorMetadata.getUnitForPrefix(prefix);
                     
                     String logicSensorId = physicalId + "_" + prefix;
                     boolean isPrimary = false;
@@ -160,8 +181,16 @@ public class DashboardViewModel extends AndroidViewModel {
                         firstInMessage = false;
                     }
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, physicalId, timestamp);
+                    updateSensorObject(sensors, logicSensorId, prefix, unit, value, isPrimary, physicalId, false);
+
+                    readingsToInsert.add(new SensorReading(logicSensorId, value, timestamp));
                 }
+            }
+
+            if (!readingsToInsert.isEmpty()) {
+                AppDatabase.databaseWriteExecutor.execute(() -> {
+                    db.readingDao().insertAll(readingsToInsert);
+                });
             }
         } catch (Exception e) {
             Log.e(TAG, "Błąd parsowania historii: " + payload + " -> " + e.getMessage());
@@ -197,13 +226,19 @@ public class DashboardViewModel extends AndroidViewModel {
                     
                     if (valStr.isEmpty()) continue;
 
-                    String unit = com.eia.app.models.SensorMetadata.getUnitForPrefix(prefix);
+                    String unit = SensorMetadata.getUnitForPrefix(prefix);
                     float value = Float.parseFloat(valStr);
 
                     String logicSensorId = sensorId + "_" + prefix;
                     boolean isPrimary = !firstFound;
 
-                    updateSingleSensor(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, System.currentTimeMillis());
+                    updateSensorObject(sensors, logicSensorId, prefix, unit, value, isPrimary, sensorId, true);
+
+                    SensorReading reading = new SensorReading(logicSensorId, value, System.currentTimeMillis());
+                    AppDatabase.databaseWriteExecutor.execute(() -> {
+                        db.readingDao().insert(reading);
+                    });
+                    
                     firstFound = true;
                 }
             }
@@ -215,7 +250,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
     public String getAiSystemContext() {
         StringBuilder context = new StringBuilder();
-        context.append("Jesteś inteligentnym asystentem systemu EIA.AI. ");
+        context.append("Jesteś inteligentnym asystentem systemu EIA. ");
         context.append("Pomagasz użytkownikowi monitorować jego dom. ");
         context.append("Oto aktualne dane z systemu:\n\n");
 
@@ -228,11 +263,16 @@ public class DashboardViewModel extends AndroidViewModel {
                        .append(" (Status: ").append(d.isOnline() ? "ONLINE" : "OFFLINE").append(")\n");
                 
                 if (d.getSensorList() != null) {
-                    for (com.eia.app.models.Sensor s : d.getSensorList()) {
+                    for (Sensor s : d.getSensorList()) {
+                        context.append("  * ").append(s.getName());
+                        if (!s.getName().equals(s.getPhysicalId())) {
+                            context.append(" (Hardware ID: ").append(s.getPhysicalId()).append(")");
+                        }
+                        
                         if (s.isHasError()) {
-                            context.append("  * ").append(s.getName()).append(": BŁĄD/BRAK DANYCH\n");
+                            context.append(": BŁĄD/BRAK DANYCH\n");
                         } else {
-                            context.append("  * ").append(s.getName()).append(": ")
+                            context.append(": ")
                                    .append(s.getValue()).append(" ").append(s.getUnit()).append("\n");
                         }
                     }
@@ -240,16 +280,22 @@ public class DashboardViewModel extends AndroidViewModel {
             }
         }
         context.append("\nZASADY STEROWANIA:\n");
-        context.append("1. Możesz zmieniać częstotliwość raportowania czujników.\n");
-        context.append("2. Aby to zrobić, dodaj na końcu odpowiedzi komendę: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
-        context.append("3. PHYSICAL_ID to identyfikator typu ESP_XXXX. SECONDS to liczba sekund (np. 300 dla 5 minut).\n");
-        context.append("4. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
+        context.append("1. Możesz zmieniać częstotliwość raportowania czujników komendą: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
+        context.append("2. Możesz zrestartować czujnik komendą: [CMD:RESET:PHYSICAL_ID].\n");
+        context.append("3. Możesz przywrócić czujnik do ustawień fabrycznych komendą: [CMD:FACTORY_RESET:PHYSICAL_ID].\n");
+        context.append("4. Możesz kalibrować WYŁĄCZNIE czujniki temperatury komendą: [CMD:CALIBRATE:PHYSICAL_ID:VALUE], gdzie VALUE to przesunięcie (np. -1.0 lub 0.5).\n");
+        context.append("5. Możesz zmienić tryb pracy czujnika (I2C lub EXT) komendą: [CMD:SET_MODE:PHYSICAL_ID:MODE:UNIT]. MODE to 'I2C' lub 'EXT'. UNIT to jednostka podana przez użytkownika.\n");
+        context.append("   * WAŻNE: Przy zmianie na tryb EXT, poinformuj użytkownika o konieczności podłączenia pinu DATA OUT czujnika do pinu 0 układu.\n");
+        context.append("   * Jeśli użytkownik nie podał jednostki przy prośbie o zmianę trybu, zapytaj go o nią.\n");
+        context.append("6. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
+        context.append("7. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
 
         context.append("\nINSTRUKCJA ODPOWIADANIA:\n");
         context.append("- Odpowiadaj zawsze w języku, w którym napisał użytkownik.\n");
         context.append("- Odpowiadaj bardzo krótko, konkretnie i wyłącznie na temat.\n");
-        context.append("- Nie lej wody, unikaj długich wstępów i zbędnych zdań.\n");
+        context.append("- Unikaj długich wstępów i zbędnych zdań.\n");
         context.append("- Jeśli użytkownik pyta o dane, podaj je od razu.\n");
+        context.append("- Jeśli użytkownik prosi o pomoc lub pyta co potrafisz, wymień zwięźle swoje funkcje: monitorowanie sensorów, zmiana interwału raportowania, restart, przywracanie ustawień fabrycznych oraz kalibracja temperatury.\n");
 
         context.append("\nNa podstawie powyższych danych odpowiedz na pytanie użytkownika.");
         return context.toString();
@@ -258,26 +304,28 @@ public class DashboardViewModel extends AndroidViewModel {
     public String handleAiResponseAndGetCleanText(String deviceId, String response) {
         if (response == null) return "";
 
-        if (response.contains("[CMD:SET_INTERVAL:")) {
+        if (response.contains("[CMD:")) {
             try {
                 int start = response.indexOf("[CMD:");
                 int end = response.indexOf("]", start);
                 String fullCmd = response.substring(start + 5, end);
                 String[] parts = fullCmd.split(":");
                 
-                if (parts.length >= 3) {
+                if (parts.length >= 2) {
+                    String action = parts[0];
                     String physicalId = parts[1];
-                    String seconds = parts[2];
                     String targetDeviceId = deviceId;
 
+                    // Szukanie bramki dla sensora
                     if ("global".equals(deviceId)) {
                         List<Device> currentList = devices.getValue();
                         if (currentList != null) {
                             for (Device d : currentList) {
                                 if (d.getSensorList() != null) {
                                     for (Sensor s : d.getSensorList()) {
-                                        if (physicalId.equals(s.getPhysicalId())) {
+                                        if (physicalId.equals(s.getPhysicalId()) || physicalId.equalsIgnoreCase(s.getName())) {
                                             targetDeviceId = d.getId();
+                                            physicalId = s.getPhysicalId(); 
                                             break;
                                         }
                                     }
@@ -288,11 +336,13 @@ public class DashboardViewModel extends AndroidViewModel {
                     }
 
                     if (!"global".equals(targetDeviceId)) {
-                        // Format: id_bramki/id_esp/config z treścią INTERVAL:sekundy
                         String topic = targetDeviceId + "/" + physicalId + "/config";
-                        String payload = "INTERVAL:" + seconds;
-                        com.eia.app.repositories.MqttRepository.getInstance().publishCommand(topic, payload);
-                        Log.d(TAG, "AI wysłało komendę MQTT: " + topic + " -> " + payload);
+                        String payload = getPayload(action, parts);
+
+                        if (!payload.isEmpty()) {
+                            MqttRepository.getInstance().publishCommand(topic, payload);
+                            Log.d(TAG, "AI wysłało komendę MQTT: " + topic + " -> " + payload);
+                        }
                     } else {
                         Log.w(TAG, "Nie znaleziono bramki dla sensora: " + physicalId);
                     }
@@ -306,7 +356,47 @@ public class DashboardViewModel extends AndroidViewModel {
         return response;
     }
 
-    private void updateSingleSensor(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, long timestamp) {
+    @NonNull
+    private String getPayload(String action, String[] parts) {
+        String payload = "";
+
+        if ("SET_INTERVAL".equals(action) && parts.length >= 3) {
+            payload = "Interval:" + parts[2];
+        } else if ("RESET".equals(action)) {
+            payload = "Reset";
+        } else if ("FACTORY_RESET".equals(action)) {
+            payload = "ResetToDefault";
+        } else if ("CALIBRATE".equals(action) && parts.length >= 3) {
+            payload = "Calibration:" + parts[2];
+        } else if ("SET_MODE".equals(action) && parts.length >= 4) {
+            String mode = parts[2];
+            String unit = parts[3];
+            payload = "Mode:" + mode;
+            saveCustomUnit(parts[1], unit);
+        }
+        return payload;
+    }
+
+    private void saveCustomUnit(String physicalId, String unit) {
+        prefs.edit().putString("custom_unit_" + physicalId, unit).apply();
+        
+        // Aktualizacja aktualnie załadowanych sensorów
+        List<Device> currentList = devices.getValue();
+        if (currentList != null) {
+            for (Device d : currentList) {
+                if (d.getSensorList() != null) {
+                    for (Sensor s : d.getSensorList()) {
+                        if (physicalId.equals(s.getPhysicalId())) {
+                            s.setUnit(unit);
+                        }
+                    }
+                }
+            }
+            devices.setValue(new ArrayList<>(currentList));
+        }
+    }
+
+    private void updateSensorObject(List<Sensor> sensors, String id, String prefix, String unit, float value, boolean isPrimary, String physicalId, boolean isLive) {
         boolean found = false;
         for (Sensor s : sensors) {
             if (s.getId().equals(id)) {
@@ -315,7 +405,11 @@ public class DashboardViewModel extends AndroidViewModel {
                 s.setPrefix(prefix);
                 s.setPrimary(isPrimary);
                 s.setPhysicalId(physicalId);
-                s.setHasError(false);
+
+                if (isLive) {
+                    s.setHasError(false);
+                }
+
                 found = true;
                 break;
             }
@@ -330,26 +424,43 @@ public class DashboardViewModel extends AndroidViewModel {
                 }
             }
 
-            String name = (existingName != null) ? existingName : physicalId;
+            String name;
+            if (existingName != null) {
+                name = existingName;
+            } else {
+                switch (prefix) {
+                    case "T": name = getApplication().getString(R.string.sensor_name_temp); break;
+                    case "H": name = getApplication().getString(R.string.sensor_name_hum); break;
+                    case "P": name = getApplication().getString(R.string.sensor_name_pres); break;
+                    case "L": name = getApplication().getString(R.string.sensor_name_lux); break;
+                    case "V": name = getApplication().getString(R.string.sensor_name_volt); break;
+                    default: name = physicalId; break;
+                }
+            }
             sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary, physicalId));
         }
-
-        // zapisanie do bazy danych
-        com.eia.app.db.SensorReading reading = new com.eia.app.db.SensorReading(id, value, timestamp);
-        com.eia.app.db.AppDatabase.databaseWriteExecutor.execute(() -> {
-            db.readingDao().insert(reading);
-        });
+        
+        // Zastosowanie niestandardowej jednostki, jeśli istnieje
+        String customUnit = prefs.getString("custom_unit_" + physicalId, null);
+        if (customUnit != null) {
+            for (Sensor s : sensors) {
+                if (id.equals(s.getId())) {
+                    s.setUnit(customUnit);
+                    break;
+                }
+            }
+        }
     }
 
     private void cleanOldData() {
         // usuwanie danych starszych niż 24 godziny
         long threshold = System.currentTimeMillis() - (24 * 60 * 60 * 1000);
-        com.eia.app.db.AppDatabase.databaseWriteExecutor.execute(() -> {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
             db.readingDao().deleteOldReadings(threshold);
         });
     }
 
-    public LiveData<List<com.eia.app.db.SensorReading>> getReadingsForSensor(String sensorId) {
+    public LiveData<List<SensorReading>> getReadingsForSensor(String sensorId) {
         return db.readingDao().getReadingsForSensor(sensorId);
     }
 
@@ -362,7 +473,8 @@ public class DashboardViewModel extends AndroidViewModel {
             }
         }
         if (!anyFound && hasError) {
-            sensors.add(new Sensor(baseSensorId, baseSensorId, "---", 0, true, "", true, baseSensorId));
+            String errorName = getApplication().getString(R.string.sensor_error);
+            sensors.add(new Sensor(baseSensorId, errorName, "---", 0, true, "", true, baseSensorId));
         }
     }
   public void loadDevices() {
@@ -370,7 +482,9 @@ public class DashboardViewModel extends AndroidViewModel {
         if (json != null) {
             Type type = new TypeToken<ArrayList<Device>>() {}.getType();
             List<Device> loadedDevices = gson.fromJson(json, type);
-            devices.setValue(loadedDevices);
+            if (loadedDevices != null) {
+                devices.setValue(loadedDevices);
+            }
         }
     }
 
@@ -381,7 +495,7 @@ public class DashboardViewModel extends AndroidViewModel {
         boolean found = false;
         for (int i = 0; i < currentList.size(); i++) {
             if (currentList.get(i).getId().equals(device.getId())) {
-                currentList.set(i, device);
+                currentList.set(i, device.copy());
                 found = true;
                 break;
             }
@@ -389,11 +503,34 @@ public class DashboardViewModel extends AndroidViewModel {
         
         if (!found) {
             if (currentList.size() >= 5) return;
-            currentList.add(device);
+            currentList.add(device.copy());
         }
         
         devices.setValue(new ArrayList<>(currentList));
         persistDevices(currentList);
+    }
+
+    public void renameSensorGroup(String deviceId, String physicalId, String newName) {
+        List<Device> currentList = devices.getValue();
+        if (currentList == null) return;
+
+        boolean updated = false;
+        for (Device d : currentList) {
+            if (d.getId().equals(deviceId)) {
+                if (d.getSensorList() != null) {
+                    for (Sensor s : d.getSensorList()) {
+                        if (physicalId.equals(s.getPhysicalId())) {
+                            s.setName(newName);
+                            updated = true;
+                        }
+                    }
+                }
+                if (updated) {
+                    saveDevice(d);
+                }
+                break;
+            }
+        }
     }
 
     public void deleteDevice(String deviceId) {
@@ -424,7 +561,33 @@ public class DashboardViewModel extends AndroidViewModel {
         long currentTime = System.currentTimeMillis();
         Long lastSync = lastSyncTimes.get(deviceId);
 
+        List<Device> currentList = devices.getValue();
+        boolean isOnline = false;
+        if (currentList != null) {
+            for (Device d : currentList) {
+                if (d.getId().equals(deviceId)) {
+                    isOnline = d.isOnline();
+                    break;
+                }
+            }
+        }
+
+        if (!isOnline) {
+            Log.d(TAG, "Synchronizacja pominięta - bramka offline: " + deviceId);
+            return;
+        }
+
         if (lastSync == null || (currentTime - lastSync) > 2 * 60 * 1000) {
+            isSyncing.postValue(true);
+            
+            // Timeout dla ładowania
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (Boolean.TRUE.equals(isSyncing.getValue())) {
+                    isSyncing.postValue(false);
+                    Log.d(TAG, "Sync timeout reached for: " + deviceId);
+                }
+            }, 10000); // 10 sekund
+
             String commandTopic = deviceId + "/command";
             MqttRepository.getInstance().publishCommand(commandTopic, "GET_HISTORY");
             lastSyncTimes.put(deviceId, currentTime);
@@ -434,8 +597,40 @@ public class DashboardViewModel extends AndroidViewModel {
         }
     }
 
+    public LiveData<Boolean> getIsSyncing() {
+        return isSyncing;
+    }
+
     public void initMqttConnection() {
         MqttRepository.getInstance().connectToBroker();
+    }
+
+    public void addToChatHistory(ChatMessage message) {
+        chatHistory.add(message);
+        if (chatHistory.size() > 10) {
+            chatHistory.remove(0);
+        }
+    }
+
+    public String getFormattedChatHistory() {
+        if (chatHistory.isEmpty()) return "";
+        
+        StringBuilder sb = new StringBuilder("\nHISTORIA OSTATNIEJ ROZMOWY:\n");
+        for (ChatMessage msg : chatHistory) {
+            String role = (msg.getType() == ChatMessage.Type.USER) ? "Użytkownik" : "Asystent";
+            sb.append(role).append(": ").append(msg.getText()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    public void clearChatHistory() {
+        chatHistory.clear();
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        MqttRepository.getInstance().getEventStream().removeObserver(mqttObserver);
     }
 
 }

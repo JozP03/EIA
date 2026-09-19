@@ -1,10 +1,14 @@
 package com.eia.app.fragments;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,6 +29,8 @@ import com.eia.app.models.Sensor;
 import com.eia.app.providers.AiFactory;
 import com.eia.app.providers.AiProvider;
 import com.eia.app.viewModels.DashboardViewModel;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +72,7 @@ public class DeviceDetailsFragment extends Fragment {
         
         view.findViewById(R.id.btnBack).setOnClickListener(v -> Navigation.findNavController(v).popBackStack());
 
-        adapter = new SensorGroupAdapter(viewModel, getViewLifecycleOwner());
+        adapter = new SensorGroupAdapter(viewModel, getViewLifecycleOwner(), this::showSensorRenameDialog);
         rvSensors.setLayoutManager(new LinearLayoutManager(getContext()));
         rvSensors.setAdapter(adapter);
 
@@ -91,9 +97,17 @@ public class DeviceDetailsFragment extends Fragment {
             }
         });
 
+        // Obsługa nakładki ładowania
+        View loadingOverlay = view.findViewById(R.id.loadingOverlay);
+        viewModel.getIsSyncing().observe(getViewLifecycleOwner(), isSyncing -> {
+            if (isSyncing != null) {
+                loadingOverlay.setVisibility(isSyncing ? View.VISIBLE : View.GONE);
+            }
+        });
+
         // Obsługa dymka AI
         View fabAi = view.findViewById(R.id.fabAiChat);
-        android.content.SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", android.content.Context.MODE_PRIVATE);
+        SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);
         String aiKey = prefs.getString("ai_api_key", "");
         
         Log.d("DeviceDetailsFragment", "Klucz AI: [" + aiKey + "]");
@@ -107,18 +121,18 @@ public class DeviceDetailsFragment extends Fragment {
     }
 
     private void showAiChat() {
-        com.google.android.material.bottomsheet.BottomSheetDialog bottomSheet = new com.google.android.material.bottomsheet.BottomSheetDialog(requireContext());
+        BottomSheetDialog bottomSheet = new BottomSheetDialog(requireContext());
         View view = getLayoutInflater().inflate(R.layout.layout_ai_chat, null);
 
         view.findViewById(R.id.btnCloseChat).setOnClickListener(v -> bottomSheet.dismiss());
 
-        androidx.recyclerview.widget.RecyclerView rv = view.findViewById(R.id.rvChatMessages);
+        RecyclerView rv = view.findViewById(R.id.rvChatMessages);
         ChatAdapter chatAdapter = new ChatAdapter();
-        rv.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext()));
+        rv.setLayoutManager(new LinearLayoutManager(getContext()));
         rv.setAdapter(chatAdapter);
 
-        android.widget.ProgressBar progressBar = view.findViewById(R.id.pbAiLoading);
-        android.widget.EditText etMessage = view.findViewById(R.id.etChatMessage);
+        ProgressBar progressBar = view.findViewById(R.id.pbAiLoading);
+        EditText etMessage = view.findViewById(R.id.etChatMessage);
         view.findViewById(R.id.btnSendMessage).setOnClickListener(v -> {
             String text = etMessage.getText().toString().trim();
             if (!text.isEmpty()) {
@@ -128,8 +142,11 @@ public class DeviceDetailsFragment extends Fragment {
 
                 progressBar.setVisibility(View.VISIBLE);
 
-                // Budujemy pełny prompt z kontekstem urządzeń
-                String fullPrompt = viewModel.getAiSystemContext() + "\n\nPytanie użytkownika: " + text;
+                viewModel.addToChatHistory(new ChatMessage(text, ChatMessage.Type.USER));
+
+                String fullPrompt = viewModel.getAiSystemContext() + 
+                                  viewModel.getFormattedChatHistory() +
+                                  "\n\nNowe pytanie użytkownika: " + text;
 
                 AiProvider provider = AiFactory.getProvider(requireContext());
                 provider.askAi(fullPrompt, new AiProvider.AiCallback() {
@@ -139,8 +156,9 @@ public class DeviceDetailsFragment extends Fragment {
                             getActivity().runOnUiThread(() -> {
                                 progressBar.setVisibility(View.GONE);
                                 
-                                // Przetwarzamy odpowiedź AI (szukamy komend dla tej bramki)
                                 String cleanText = viewModel.handleAiResponseAndGetCleanText(deviceId, response);
+
+                                viewModel.addToChatHistory(new ChatMessage(cleanText, ChatMessage.Type.AI));
                                 
                                 chatAdapter.addMessage(new ChatMessage(cleanText, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
@@ -153,7 +171,8 @@ public class DeviceDetailsFragment extends Fragment {
                         if (isAdded()) {
                             getActivity().runOnUiThread(() -> {
                                 progressBar.setVisibility(View.GONE);
-                                chatAdapter.addMessage(new ChatMessage("Błąd AI: " + error, ChatMessage.Type.AI));
+                                String errorMsg = getString(R.string.ai_error_prefix, error);
+                                chatAdapter.addMessage(new ChatMessage(errorMsg, ChatMessage.Type.AI));
                                 rv.scrollToPosition(chatAdapter.getItemCount() - 1);
                             });
                         }
@@ -163,7 +182,33 @@ public class DeviceDetailsFragment extends Fragment {
         });
 
         bottomSheet.setContentView(view);
-        bottomSheet.getBehavior().setState(com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED);
+        bottomSheet.getBehavior().setState(BottomSheetBehavior.STATE_EXPANDED);
+        bottomSheet.show();
+    }
+
+    private void showSensorRenameDialog(String physicalId, String currentName) {
+        BottomSheetDialog bottomSheet = new BottomSheetDialog(requireContext());
+        View view = getLayoutInflater().inflate(R.layout.layout_device_actions, null);
+
+        TextView tvTitle = view.findViewById(R.id.tvDeviceDescription);
+        tvTitle.setText(R.string.device_actions_desc);
+
+        EditText etName = view.findViewById(R.id.etDeviceName);
+        etName.setText(currentName);
+
+        view.findViewById(R.id.btnSaveName).setOnClickListener(v -> {
+            String newName = etName.getText().toString().trim();
+            if (!newName.isEmpty()) {
+                viewModel.renameSensorGroup(deviceId, physicalId, newName);
+                bottomSheet.dismiss();
+            } else {
+                Toast.makeText(getContext(), R.string.toast_name_empty, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        view.findViewById(R.id.btnDeleteDevice).setVisibility(View.GONE);
+
+        bottomSheet.setContentView(view);
         bottomSheet.show();
     }
 }

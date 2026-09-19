@@ -97,7 +97,7 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
             String password = etPassword.getText().toString().trim();
             
             if (password.isEmpty()) {
-                Toast.makeText(getContext(), "Wprowadź hasło!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.toast_enter_password), Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -108,7 +108,7 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
                 String subnet = etSubnet.getText().toString().trim();
 
                 if (ip.isEmpty() || gateway.isEmpty() || subnet.isEmpty()) {
-                    Toast.makeText(getContext(), "Uzupełnij parametry IP!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), getString(R.string.toast_fill_ip), Toast.LENGTH_SHORT).show();
                     return;
                 }
                 // Format: CONN_STATIC:SSID;Haslo;IP;Brama;Maska
@@ -122,9 +122,9 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
                 loadingOverlay.setVisibility(View.VISIBLE);
 
                 usbService.sendCommand(command);
-                Toast.makeText(getContext(), "Wysyłanie konfiguracji...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.toast_sending_config), Toast.LENGTH_SHORT).show();
             } else {
-                Toast.makeText(getContext(), "Urządzenie nie jest połączone!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.toast_usb_disconnected), Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -206,9 +206,9 @@ public class ConfigFragment extends Fragment implements UsbSerialService.Connect
                     Navigation.findNavController(getView()).navigate(R.id.action_configFragment_to_deviceSetupFragment, args);
                 }
             } else if (line.startsWith("STATUS:ERROR_TIMEOUT")) {
-                Toast.makeText(getContext(), "Błąd: Przekroczono czas połączenia", Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), getString(R.string.toast_error_timeout), Toast.LENGTH_LONG).show();
             } else if (line.startsWith("STATUS:ERROR_FORMAT")) {
-                Toast.makeText(getContext(), "Błąd: Niepoprawny format danych", Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), getString(R.string.toast_error_format), Toast.LENGTH_LONG).show();
             }
         });
     }

@@ -18,11 +18,15 @@ import com.eia.app.db.SensorReading;
 import com.eia.app.models.Sensor;
 import com.eia.app.viewModels.DashboardViewModel;
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.ValueFormatter;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -33,11 +37,17 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
     private final DashboardViewModel viewModel;
     private final LifecycleOwner lifecycleOwner;
     private final Map<String, List<Sensor>> sensorGroups = new HashMap<>();
+    private final OnSensorLongClickListener longClickListener;
 
-    public SensorGroupAdapter(DashboardViewModel viewModel, LifecycleOwner lifecycleOwner) {
+    public interface OnSensorLongClickListener {
+        void onSensorLongClick(String physicalId, String currentName);
+    }
+
+    public SensorGroupAdapter(DashboardViewModel viewModel, LifecycleOwner lifecycleOwner, OnSensorLongClickListener longClickListener) {
         super(new StringDiffCallback());
         this.viewModel = viewModel;
         this.lifecycleOwner = lifecycleOwner;
+        this.longClickListener = longClickListener;
     }
 
     public void updateData(List<Sensor> sensors) {
@@ -55,6 +65,7 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
             sensorGroups.get(pid).add(s);
         }
         submitList(physicalIds);
+        notifyDataSetChanged();
     }
 
     @NonNull
@@ -72,7 +83,14 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         if (sensorsInGroup == null || sensorsInGroup.isEmpty()) return;
 
         Sensor first = sensorsInGroup.get(0);
-        holder.tvTitle.setText(first.getName() + " (" + physicalId + ")");
+        holder.tvTitle.setText(first.getName());
+
+        holder.itemView.setOnLongClickListener(v -> {
+            if (longClickListener != null) {
+                longClickListener.onSensorLongClick(physicalId, first.getName());
+            }
+            return true;
+        });
 
         holder.measuresContainer.removeAllViews();
         for (Sensor s : sensorsInGroup) {
@@ -90,12 +108,12 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
 
         String typeName;
         switch (sensor.getPrefix()) {
-            case "T": typeName = "Temperatura"; break;
-            case "H": typeName = "Wilgotność"; break;
-            case "P": typeName = "Ciśnienie"; break;
-            case "L": typeName = "Jasność"; break;
-            case "V": typeName = "Napięcie"; break;
-            default: typeName = "Odczyt " + sensor.getPrefix(); break;
+            case "T": typeName = container.getContext().getString(R.string.sensor_name_temp); break;
+            case "H": typeName = container.getContext().getString(R.string.sensor_name_hum); break;
+            case "P": typeName = container.getContext().getString(R.string.sensor_name_pres); break;
+            case "L": typeName = container.getContext().getString(R.string.sensor_name_lux); break;
+            case "V": typeName = container.getContext().getString(R.string.sensor_name_volt); break;
+            default: typeName = container.getContext().getString(R.string.sensor_reading_default, sensor.getPrefix()); break;
         }
         tvLabel.setText(typeName);
 
@@ -110,7 +128,7 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
             
             viewModel.getReadingsForSensor(sensor.getId()).observe(lifecycleOwner, readings -> {
                 if (readings != null && !readings.isEmpty()) {
-                    setupChart(chart, readings);
+                    setupChart(chart, readings, sensor.getPrefix());
                 }
             });
         }
@@ -118,28 +136,79 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         container.addView(row);
     }
 
-    private void setupChart(LineChart chart, List<SensorReading> readings) {
+    private void setupChart(LineChart chart, List<SensorReading> readings, String prefix) {
         List<Entry> entries = new ArrayList<>();
+        float dataMin = Float.MAX_VALUE;
+        float dataMax = Float.MIN_VALUE;
+
         for (int i = 0; i < readings.size(); i++) {
-            entries.add(new Entry(i, readings.get(i).getValue()));
+            SensorReading reading = readings.get(i);
+            float val = reading.getValue();
+            entries.add(new Entry(reading.getTimestamp(), val));
+            if (val < dataMin) dataMin = val;
+            if (val > dataMax) dataMax = val;
         }
+
+        // zakresy
+        float min = 0f;
+        float max = 100f;
+
+        switch (prefix) {
+            case "T": // Temperatura -20 do 60
+                min = -20f; max = 60f; break;
+            case "H": // Wilgotność 0-100
+                min = 0f; max = 100f; break;
+            case "P": // Ciśnienie 950-1050
+                min = 950f; max = 1050f; break;
+            case "L": // Jasność 0-1000
+                min = 0f; max = 1000f; break;
+            case "V": // Napięcie 0-5
+                min = 0f; max = 5f; break;
+            default:
+                min = dataMin - 5f; max = dataMax + 5f;
+        }
+
+        if (dataMin < min) min = dataMin - (prefix.equals("P") ? 10f : 5f);
+        if (dataMax > max) max = dataMax + (prefix.equals("P") ? 10f : 5f);
+
+        int accentGreen = chart.getContext().getColor(R.color.accent_green);
         LineDataSet dataSet = new LineDataSet(entries, "");
-        dataSet.setColor(Color.parseColor("#22C55E"));
+        dataSet.setColor(accentGreen);
         dataSet.setLineWidth(2f);
         dataSet.setDrawCircles(false);
         dataSet.setDrawValues(false);
         dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
         dataSet.setDrawFilled(true);
-        dataSet.setFillColor(Color.parseColor("#22C55E"));
+        dataSet.setFillColor(accentGreen);
         dataSet.setFillAlpha(20);
 
         chart.setData(new LineData(dataSet));
+        chart.getAxisLeft().setAxisMinimum(min);
+        chart.getAxisLeft().setAxisMaximum(max);
+        
         chart.getDescription().setEnabled(false);
         chart.getLegend().setEnabled(false);
         chart.getAxisRight().setEnabled(false);
-        chart.getXAxis().setEnabled(false);
+
+        // Konfiguracja osi czasu (X)
+        XAxis xAxis = chart.getXAxis();
+        xAxis.setEnabled(true);
+        xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
+        xAxis.setDrawGridLines(false);
+        xAxis.setTextColor(chart.getContext().getColor(R.color.text_muted));
+        xAxis.setTextSize(8f);
+        xAxis.setLabelCount(4);
+        xAxis.setValueFormatter(new ValueFormatter() {
+            private final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+            @Override
+            public String getFormattedValue(float value) {
+                return sdf.format(new Date((long) value));
+            }
+        });
+
         chart.getAxisLeft().setDrawGridLines(false);
-        chart.getAxisLeft().setTextSize(8f);
+        chart.getAxisLeft().setTextColor(chart.getContext().getColor(R.color.text_muted));
+        chart.getAxisLeft().setTextSize(10f);
         chart.setTouchEnabled(false);
         chart.invalidate();
     }

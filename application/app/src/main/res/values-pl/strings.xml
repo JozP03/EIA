@@ -1,0 +1,171 @@
+<resources>
+    <string name="app_name">EIA</string>
+
+    <!-- Navigation Descriptions -->
+    <string name="back_button_description">Wstecz</string>
+    <string name="info_icon_description">Informacja</string>
+    <string name="menu_button_description">Menu</string>
+    <string name="menu_dashboard">Dashboard</string>
+    <string name="menu_settings">Ustawienia</string>
+
+    <!-- Initial Setup -->
+    <string name="setup_title">Wstępna Konfiguracja</string>
+    <string name="setup_usb_conn">Połączenie USB-C</string>
+    <string name="setup_usb_instruction">Proszę podłączyć\nurządzenie przez USB</string>
+    <string name="setup_usb_sub_instruction">Upewnij się, że kabel USB jest poprawnie wpięty do urządzenia.</string>
+    <string name="setup_btn_connect">Połącz</string>
+    <string name="setup_btn_skip">Pomiń</string>
+
+    <!-- WiFi Scan -->
+    <string name="scan_title">Wybierz sieć Wi-Fi</string>
+    <string name="scan_subtitle">Dostępne sieci w zasięgu urządzenia pomiarowego</string>
+    <string name="scan_hint">Szukaj sieci...</string>
+    <string name="scan_btn_refresh">ODŚWIEŻ</string>
+    <string name="scan_help_title">Nie widzisz swojej sieci?</string>
+    <string name="scan_help_desc">Upewnij się, że router nadaje w paśmie 2.4GHz.</string>
+    <string name="scan_btn_manual">KONFIGURACJA RĘCZNA</string>
+
+    <!-- WiFi Config -->
+    <string name="config_title">Konfiguracja sieci</string>
+    <string name="config_subtitle">Ustawienia parametrów połączenia dla urządzenia pomiarowego</string>
+    <string name="config_selected_wifi">WYBRANA SIEĆ</string>
+    <string name="config_lbl_password">HASŁO SIECI</string>
+    <string name="config_lbl_ip_type">PRZYPISANIE ADRESU IP</string>
+    <string name="config_btn_static">Statyczne IP</string>
+    <string name="config_btn_dhcp">DHCP</string>
+    <string name="config_lbl_ip_address">ADRES IP</string>
+    <string name="config_lbl_mask">MASKA</string>
+    <string name="config_lbl_gateway">BRAMA DOMYŚLNA</string>
+    <string name="config_btn_submit">ZATWIERDŹ I POŁĄCZ</string>
+
+    <!-- Personalization / Device Setup -->
+    <string name="personalize_title">Personalizacja</string>
+    <string name="personalize_subtitle">Nadaj nazwę urządzeniu i skonfiguruj połączenie z Twoim brokerem MQTT</string>
+    <string name="personalize_lbl_name">NAZWA URZĄDZENIA</string>
+    <string name="personalize_hint_name">np. Bramka Garaż</string>
+    <string name="personalize_lbl_mqtt_host">ADRES SERWERA MQTT</string>
+    <string name="personalize_hint_mqtt_host">np. broker.hivemq.com</string>
+    <string name="personalize_lbl_mqtt_port">PORT MQTT</string>
+    <string name="personalize_lbl_mqtt_user">UŻYTKOWNIK MQTT</string>
+    <string name="personalize_lbl_mqtt_pass">HASŁO MQTT</string>
+    <string name="personalize_btn_finish">ZAKOŃCZ I ZAPISZ</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Twoje Urządzenia</string>
+    <string name="dashboard_subtitle">Zarządzaj i monitoruj aktywne węzły sieci sensorowej</string>
+    <string name="empty_device_list">Brak dodanych urządzeń</string>
+    <string name="status_online">ONLINE</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="no_sensors_connected">Brak podłączonych sensorów</string>
+    <string name="sensor_error">Brak danych</string>
+
+    <!-- Device Details -->
+    <string name="details_title">Szczegóły urządzenia</string>
+    <string name="empty_sensor_list">Brak sensorów podłączonych do tej bramki</string>
+    <string name="sensor_name_temp">Temperatura</string>
+    <string name="sensor_name_hum">Wilgotność</string>
+    <string name="sensor_name_pres">Ciśnienie</string>
+    <string name="sensor_name_lux">Jasność</string>
+    <string name="sensor_name_volt">Napięcie</string>
+    <string name="sensor_reading_default">Odczyt %1$s</string>
+
+    <!-- AI Chat -->
+    <string name="ai_asistent_title">Asystent EIA</string>
+    <string name="ai_hint">Zadaj pytanie…</string>
+    <string name="ai_loading">AI myśli…</string>
+    <string name="ai_error_prefix">Błąd AI: %1$s</string>
+    <string name="btn_nav_about">O projekcie</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Ustawienia</string>
+    <string name="language_section">JĘZYK APLIKACJI</string>
+    <string name="settings_language_hint">Wybierz język</string>
+    <string name="language_en">Angielski (English)</string>
+    <string name="language_pl">Polski</string>
+
+    <string name="theme_section">MOTYW APLIKACJI</string>
+    <string name="settings_theme_hint">Wybierz motyw</string>
+    <string name="theme_light">Jasny</string>
+    <string name="theme_dark">Ciemny</string>
+    <string name="theme_system">Domyślny systemu</string>
+    <string name="mqtt_section">KONFIGURACJA MQTT</string>
+    <string name="settings_mqtt_host_hint">Adres Brokera</string>
+    <string name="settings_mqtt_user_hint">Użytkownik</string>
+    <string name="settings_mqtt_pass_hint">Hasło</string>
+    <string name="ai_section">KONFIGURACJA AI (OPCJONALNIE)</string>
+    <string name="settings_ai_provider_hint">Dostawca AI</string>
+    <string name="settings_ai_base_url_hint">Adres Endpointu API</string>
+    <string name="settings_ai_api_key_hint">Klucz API AI</string>
+    <string name="btn_save_settings">Zapisz ustawienia</string>
+    <string name="btn_reset_factory">Resetuj do fabrycznych</string>
+
+    <!-- About -->
+    <string name="about_version_format">Wersja Beta 1.0</string>
+    <string name="about_description">EIA.AI to inteligentny system monitorowania i zarządzania sieciami sensorowymi, zaprojektowany w ramach projektu inżynierskiego.</string>
+    <string name="about_credits_label">Podziękowania</string>
+    <string name="about_source_label">Kod źródłowy</string>
+    <string name="about_source_link"><![CDATA[<a href="https://github.com/JozP03/EIA">Repozytorium GitHub</a>]]></string>
+    <string name="about_credits_list"><![CDATA[
+        • <a href="https://github.com/knolleary/pubsubclient">PubSubClient</a><br>
+        • <a href="https://github.com/mik3y/usb-serial-for-android">usb-serial-for-android</a><br>
+        • <a href="https://github.com/hivemq/hivemq-mqtt-client">hivemq-mqtt-client</a><br>
+        • <a href="https://github.com/square/retrofit">Retrofit</a><br>
+        • <a href="https://github.com/philjay/mpandroidchart">MPAndroidChart</a><br>
+        • <a href="https://github.com/square/okhttp">okhttp</a><br>
+        • <a href="https://github.com/google/gson">Gson</a>
+    ]]></string>
+    <string name="about_copyright">© 2026 Projekt EIA.</string>
+
+    <!-- Dialogs and Toasts -->
+    <string name="dialog_reset_title">Resetowanie konfiguracji</string>
+    <string name="dialog_reset_message">Czy na pewno chcesz usunąć wszystkie ustawienia i urządzenia?</string>
+    <string name="dialog_reset_yes">Tak</string>
+    <string name="dialog_reset_cancel">Anuluj</string>
+    <string name="toast_settings_saved">Ustawienia zapisane</string>
+    <string name="toast_name_empty">Nazwa nie może być pusta!</string>
+    <string name="dialog_delete_device_title">Usuń urządzenie</string>
+    <string name="dialog_delete_device_message">Czy na pewno chcesz usunąć %1$s?</string>
+    <string name="dialog_delete_device_confirm">Usuń</string>
+    <string name="device_actions_title">Zarządzaj urządzeniem</string>
+    <string name="device_actions_desc">Zmień nazwę lub usuń bramkę z listy</string>
+    <string name="device_actions_hint">Nazwa urządzenia</string>
+    <string name="device_actions_btn_save">ZAPISZ ZMIANY</string>
+    <string name="device_actions_btn_delete">USUŃ URZĄDZENIE</string>
+    <string name="loading_data">Wczytywanie danych…</string>
+
+    <!-- Error Messages -->
+    <string name="error_mqtt_host_required">Adres brokera MQTT jest wymagany</string>
+    <string name="error_mqtt_user_required">Użytkownik MQTT jest wymagany</string>
+    <string name="error_mqtt_pass_required">Hasło MQTT jest wymagane</string>
+
+    <!-- Toasts for Setup -->
+    <string name="toast_usb_not_ready">Urządzenie nie jest gotowe</string>
+    <string name="toast_enter_password">Wprowadź hasło!</string>
+    <string name="toast_fill_ip">Uzupełnij parametry IP!</string>
+    <string name="toast_sending_config">Wysyłanie konfiguracji...</string>
+    <string name="toast_usb_disconnected">Urządzenie nie jest połączone!</string>
+    <string name="toast_error_timeout">Błąd: Przekroczono czas połączenia</string>
+    <string name="toast_error_format">Błąd: Niepoprawny format danych</string>
+    <string name="toast_fields_required">Wszystkie pola są wymagane!</string>
+    <string name="toast_usb_error">Błąd połączenia USB!</string>
+    <string name="toast_config_saved">Konfiguracja zapisana!</string>
+    <string name="toast_error_device_save">Błąd zapisu na urządzeniu!</string>
+
+    <!-- Formatting -->
+    <string name="gateway_default_name">Bramka %1$s</string>
+
+    <!-- Legacy / System Descriptions -->
+    <string name="usb_icon_description">Urządzenie USB</string>
+    <string name="help_icon_description">Pomoc</string>
+    <string name="wifi_icon_description">Ikona Wi-Fi</string>
+    <string name="lock_icon_description">Zabezpieczona sieć</string>
+    <string name="arrow_right_description">Wybierz</string>
+    <string name="messages_header">Wiadomości</string>
+    <string name="sync_header">Synchronizacja</string>
+    <string name="signature_title">Twój podpis</string>
+    <string name="reply_title">Domyślna akcja odpowiedzi</string>
+    <string name="sync_title">Synchronizuj e-mail okresowo</string>
+    <string name="attachment_title">Pobieraj załączniki przychodzące</string>
+    <string name="attachment_summary_on">Automatycznie pobieraj załączniki dla przychodzących e-maili</string>
+    <string name="attachment_summary_off">Pobieraj załączniki tylko na żądanie</string>
+</resources>

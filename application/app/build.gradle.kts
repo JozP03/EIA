@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.oss.licenses)
 }
 
 android {
@@ -78,6 +79,9 @@ dependencies {
 
     // charts
     implementation(libs.mp.android.chart)
+
+    implementation(libs.play.services.oss.licenses)
+
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)

@@ -1,25 +1,171 @@
 <resources>
     <string name="app_name">EIA</string>
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="back_button_description">Wstecz</string>
-    <string name="help_icon_description">Pomoc</string>
-    <string name="wifi_icon_description">Ikona Wi-Fi</string>
-    <string name="lock_icon_description">Zabezpieczona sieć</string>
-    <string name="arrow_right_description">Wybierz</string>
-    <string name="usb_icon_description">Urządzenie USB</string>
-    <string name="info_icon_description">Informacja</string>
-    <!-- Preference Titles -->
+
+    <!-- Navigation Descriptions -->
+    <string name="back_button_description">Back</string>
+    <string name="info_icon_description">Information</string>
+    <string name="menu_button_description">Menu</string>
+    <string name="menu_dashboard">Dashboard</string>
+    <string name="menu_settings">Settings</string>
+
+    <!-- Initial Setup -->
+    <string name="setup_title">Initial Configuration</string>
+    <string name="setup_usb_conn">USB-C Connection</string>
+    <string name="setup_usb_instruction">Please connect\nthe device via USB</string>
+    <string name="setup_usb_sub_instruction">Make sure the USB cable is correctly plugged into the device.</string>
+    <string name="setup_btn_connect">Connect</string>
+    <string name="setup_btn_skip">Skip</string>
+
+    <!-- WiFi Scan -->
+    <string name="scan_title">Select Wi-Fi Network</string>
+    <string name="scan_subtitle">Available networks within range of the measurement device</string>
+    <string name="scan_hint">Search network...</string>
+    <string name="scan_btn_refresh">REFRESH</string>
+    <string name="scan_help_title">Don\'t see your network?</string>
+    <string name="scan_help_desc">Make sure the router is broadcasting in the 2.4GHz band.</string>
+    <string name="scan_btn_manual">MANUAL CONFIGURATION</string>
+
+    <!-- WiFi Config -->
+    <string name="config_title">Network Configuration</string>
+    <string name="config_subtitle">Connection parameter settings for the measurement device</string>
+    <string name="config_selected_wifi">SELECTED NETWORK</string>
+    <string name="config_lbl_password">NETWORK PASSWORD</string>
+    <string name="config_lbl_ip_type">IP ADDRESS ASSIGNMENT</string>
+    <string name="config_btn_static">Static IP</string>
+    <string name="config_btn_dhcp">DHCP</string>
+    <string name="config_lbl_ip_address">IP ADDRESS</string>
+    <string name="config_lbl_mask">MASK</string>
+    <string name="config_lbl_gateway">DEFAULT GATEWAY</string>
+    <string name="config_btn_submit">CONFIRM AND CONNECT</string>
+
+    <!-- Personalization / Device Setup -->
+    <string name="personalize_title">Personalization</string>
+    <string name="personalize_subtitle">Give the device a name and configure the connection to your MQTT broker</string>
+    <string name="personalize_lbl_name">DEVICE NAME</string>
+    <string name="personalize_hint_name">e.g. Garage Gateway</string>
+    <string name="personalize_lbl_mqtt_host">MQTT SERVER ADDRESS</string>
+    <string name="personalize_hint_mqtt_host">e.g. broker.hivemq.com</string>
+    <string name="personalize_lbl_mqtt_port">MQTT PORT</string>
+    <string name="personalize_lbl_mqtt_user">MQTT USER</string>
+    <string name="personalize_lbl_mqtt_pass">MQTT PASSWORD</string>
+    <string name="personalize_btn_finish">FINISH AND SAVE</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_title">Your Devices</string>
+    <string name="dashboard_subtitle">Manage and monitor your active sensor network nodes</string>
+    <string name="empty_device_list">No devices added</string>
+    <string name="status_online">ONLINE</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="no_sensors_connected">No connected sensors</string>
+    <string name="sensor_error">No data</string>
+
+    <!-- Device Details -->
+    <string name="details_title">Device Details</string>
+    <string name="empty_sensor_list">No sensors connected to this gateway</string>
+    <string name="sensor_name_temp">Temperature</string>
+    <string name="sensor_name_hum">Humidity</string>
+    <string name="sensor_name_pres">Pressure</string>
+    <string name="sensor_name_lux">Brightness</string>
+    <string name="sensor_name_volt">Voltage</string>
+    <string name="sensor_reading_default">Reading %1$s</string>
+
+    <!-- AI Chat -->
+    <string name="ai_asistent_title">EIA Assistant</string>
+    <string name="ai_hint">Ask a question...</string>
+    <string name="ai_loading">AI is thinking...</string>
+    <string name="ai_error_prefix">AI Error: %1$s</string>
+    <string name="btn_nav_about">About</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="language_section">APP LANGUAGE</string>
+    <string name="settings_language_hint">Choose Language</string>
+    <string name="language_en">English</string>
+    <string name="language_pl">Polish (Polski)</string>
+
+    <string name="theme_section">APP THEME</string>
+    <string name="settings_theme_hint">Choose Theme</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System Default</string>
+    <string name="mqtt_section">MQTT CONFIGURATION</string>
+    <string name="settings_mqtt_host_hint">Broker Address</string>
+    <string name="settings_mqtt_user_hint">User</string>
+    <string name="settings_mqtt_pass_hint">Password</string>
+    <string name="ai_section">AI CONFIGURATION (OPTIONAL)</string>
+    <string name="settings_ai_provider_hint">AI Provider</string>
+    <string name="settings_ai_base_url_hint">API Endpoint Address</string>
+    <string name="settings_ai_api_key_hint">AI API Key</string>
+    <string name="btn_save_settings">Save Settings</string>
+    <string name="btn_reset_factory">Reset to Factory Defaults</string>
+
+    <!-- About -->
+    <string name="about_version_format">Version Beta 1.0</string>
+    <string name="about_description">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua</string>
+    <string name="about_credits_label">Credits</string>
+    <string name="about_source_label">Source Code</string>
+    <string name="about_source_link"><![CDATA[<a href="https://github.com/JozP03/EIA">GitHub Repository</a>]]></string>
+    <string name="about_credits_list"><![CDATA[
+        • <a href="https://github.com/knolleary/pubsubclient">PubSubClient</a><br>
+        • <a href="https://github.com/mik3y/usb-serial-for-android">usb-serial-for-android</a><br>
+        • <a href="https://github.com/hivemq/hivemq-mqtt-client">hivemq-mqtt-client</a><br>
+        • <a href="https://github.com/square/retrofit">Retrofit</a><br>
+        • <a href="https://github.com/philjay/mpandroidchart">MPAndroidChart</a><br>
+        • <a href="https://github.com/square/okhttp">okhttp</a><br>
+        • <a href="https://github.com/google/gson">Gson</a>
+    ]]></string>
+    <string name="about_copyright">© 2026 EIA Project.</string>
+
+    <!-- Dialogs and Toasts -->
+    <string name="dialog_reset_title">Reset Configuration</string>
+    <string name="dialog_reset_message">Are you sure you want to remove all settings and devices?</string>
+    <string name="dialog_reset_yes">Yes</string>
+    <string name="dialog_reset_cancel">Cancel</string>
+    <string name="toast_settings_saved">Settings saved</string>
+    <string name="toast_name_empty">Name cannot be empty!</string>
+    <string name="dialog_delete_device_title">Delete device</string>
+    <string name="dialog_delete_device_message">Are you sure you want to delete %1$s?</string>
+    <string name="dialog_delete_device_confirm">Delete</string>
+    <string name="device_actions_title">Manage Device</string>
+    <string name="device_actions_desc">Change name or remove gateway from the list</string>
+    <string name="device_actions_hint">Device name</string>
+    <string name="device_actions_btn_save">SAVE CHANGES</string>
+    <string name="device_actions_btn_delete">DELETE DEVICE</string>
+    <string name="loading_data">Loading data…</string>
+
+    <!-- Error Messages -->
+    <string name="error_mqtt_host_required">MQTT broker address is required</string>
+    <string name="error_mqtt_user_required">MQTT user is required</string>
+    <string name="error_mqtt_pass_required">MQTT password is required</string>
+
+    <!-- Toasts for Setup -->
+    <string name="toast_usb_not_ready">Device is not ready</string>
+    <string name="toast_enter_password">Enter password!</string>
+    <string name="toast_fill_ip">Complete IP parameters!</string>
+    <string name="toast_sending_config">Sending configuration...</string>
+    <string name="toast_usb_disconnected">Device is not connected!</string>
+    <string name="toast_error_timeout">Error: Connection timeout</string>
+    <string name="toast_error_format">Error: Incorrect data format</string>
+    <string name="toast_fields_required">All fields are required!</string>
+    <string name="toast_usb_error">USB connection error!</string>
+    <string name="toast_config_saved">Configuration saved!</string>
+    <string name="toast_error_device_save">Error saving on device!</string>
+
+    <!-- Formatting -->
+    <string name="gateway_default_name">Gateway %1$s</string>
+
+    <!-- Legacy / System Descriptions -->
+    <string name="usb_icon_description">USB Device</string>
+    <string name="help_icon_description">Help</string>
+    <string name="wifi_icon_description">Wi-Fi Icon</string>
+    <string name="lock_icon_description">Secured Network</string>
+    <string name="arrow_right_description">Select</string>
     <string name="messages_header">Messages</string>
     <string name="sync_header">Sync</string>
-
-    <!-- Messages Preferences -->
     <string name="signature_title">Your signature</string>
     <string name="reply_title">Default reply action</string>
-
-    <!-- Sync Preferences -->
     <string name="sync_title">Sync email periodically</string>
     <string name="attachment_title">Download incoming attachments</string>
-    <string name="attachment_summary_on">Automatically download attachments for incoming emails
-    </string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails</string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
 </resources>
