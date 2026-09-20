@@ -155,39 +155,41 @@ public class DashboardFragment extends Fragment {
 
                 viewModel.addToChatHistory(new ChatMessage(text, ChatMessage.Type.USER));
 
-                String fullPrompt = viewModel.getAiSystemContext() + 
-                                  viewModel.getFormattedChatHistory() + 
-                                  "\nNowe pytanie użytkownika: " + text;
+                viewModel.refreshHistoryStats(() -> {
+                    String fullPrompt = viewModel.getAiSystemContext() + 
+                                      viewModel.getFormattedChatHistory() + 
+                                      "\nNowe pytanie użytkownika: " + text;
 
-                AiProvider provider = AiFactory.getProvider(requireContext());
-                provider.askAi(fullPrompt, new AiProvider.AiCallback() {
-                    @Override
-                    public void onSuccess(String response) {
-                        if (isAdded()) {
-                            getActivity().runOnUiThread(() -> {
-                                progressBar.setVisibility(View.GONE);
+                    AiProvider provider = AiFactory.getProvider(requireContext());
+                    provider.askAi(fullPrompt, new AiProvider.AiCallback() {
+                        @Override
+                        public void onSuccess(String response) {
+                            if (isAdded()) {
+                                getActivity().runOnUiThread(() -> {
+                                    progressBar.setVisibility(View.GONE);
 
-                                String cleanText = viewModel.handleAiResponseAndGetCleanText("global", response);
-                                
-                                viewModel.addToChatHistory(new ChatMessage(cleanText, ChatMessage.Type.AI));
-                                
-                                chatAdapter.addMessage(new ChatMessage(cleanText, ChatMessage.Type.AI));
-                                rv.scrollToPosition(chatAdapter.getItemCount() - 1);
-                            });
+                                    String cleanText = viewModel.handleAiResponseAndGetCleanText("global", response);
+                                    
+                                    viewModel.addToChatHistory(new ChatMessage(cleanText, ChatMessage.Type.AI));
+                                    
+                                    chatAdapter.addMessage(new ChatMessage(cleanText, ChatMessage.Type.AI));
+                                    rv.scrollToPosition(chatAdapter.getItemCount() - 1);
+                                });
+                            }
                         }
-                    }
 
-                    @Override
-                    public void onError(String error) {
-                        if (isAdded()) {
-                            getActivity().runOnUiThread(() -> {
-                                progressBar.setVisibility(View.GONE);
-                                String errorMsg = getString(R.string.ai_error_prefix, error);
-                                chatAdapter.addMessage(new ChatMessage(errorMsg, ChatMessage.Type.AI));
-                                rv.scrollToPosition(chatAdapter.getItemCount() - 1);
-                            });
+                        @Override
+                        public void onError(String error) {
+                            if (isAdded()) {
+                                getActivity().runOnUiThread(() -> {
+                                    progressBar.setVisibility(View.GONE);
+                                    String errorMsg = getString(R.string.ai_error_prefix, error);
+                                    chatAdapter.addMessage(new ChatMessage(errorMsg, ChatMessage.Type.AI));
+                                    rv.scrollToPosition(chatAdapter.getItemCount() - 1);
+                                });
+                            }
                         }
-                    }
+                    });
                 });
             }
         });

@@ -1,7 +1,7 @@
 package com.eia.app.models;
 
 public class MqttEvent {
-    public enum Type { DATA, STATUS, CONFIG, HISTORY }
+    public enum Type { DATA, STATUS, CONFIG, HISTORY, SENSOR_STATUS }
 
     private final String deviceId;
     private final String sensorId;

@@ -6,6 +6,8 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
+import com.eia.app.models.SensorStats;
+
 import java.util.List;
 
 @Dao
@@ -21,6 +23,9 @@ public interface ReadingDao {
 
     @Query("SELECT * FROM sensor_readings WHERE sensorId = :sensorId AND timestamp > :since ORDER BY timestamp ASC")
     LiveData<List<SensorReading>> getReadingsSince(String sensorId, long since);
+
+    @Query("SELECT MIN(value) as min, MAX(value) as max, AVG(value) as avg, COUNT(*) as count FROM sensor_readings WHERE sensorId = :sensorId AND timestamp > :since")
+    SensorStats getStats(String sensorId, long since);
 
     @Query("DELETE FROM sensor_readings WHERE timestamp < :threshold")
     void deleteOldReadings(long threshold);

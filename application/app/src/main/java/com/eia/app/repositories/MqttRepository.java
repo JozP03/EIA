@@ -171,6 +171,8 @@ public class MqttRepository {
                         
                         if (thirdPart.equals("config")) {
                             eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.CONFIG));
+                        } else if (thirdPart.equals("status")) {
+                            eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.SENSOR_STATUS));
                         } else {
                             eventStream.postValue(new MqttEvent(deviceId, sensorId, payload, MqttEvent.Type.DATA));
                         }
