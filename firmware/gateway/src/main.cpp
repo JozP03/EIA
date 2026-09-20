@@ -111,6 +111,7 @@ void mqttTask(void *pvParameters);
 void loadMqttConfig();
 void loadHistoryFromFlash();
 void saveHistoryToFlash();
+void clearLocalHistory();
 
 // --- LITTLEFS ---
 void loadHistoryFromFlash() {
@@ -143,6 +144,14 @@ void saveHistoryToFlash() {
     file.write((uint8_t*)&historyIndex, sizeof(historyIndex));
     file.write((uint8_t*)&historyWrapped, sizeof(historyWrapped));
     file.close();
+}
+
+void clearLocalHistory() {
+    memset(historyBuffer, 0, sizeof(historyBuffer));
+    historyIndex = 0;
+    historyWrapped = false;
+    LittleFS.remove("/history.bin");
+    if (Serial) Serial.println("STATUS:HISTORY_CLEARED");
 }
 
 // --- CALLBACK BLE---
@@ -273,11 +282,7 @@ void loop() {
     else if (input.startsWith("CONN:")) handleConnectionRequest(input);
     else if (input.startsWith("CONN_STATIC:")) handleStaticConnectionRequest(input);
     else if (input.equalsIgnoreCase("CLEAR_HISTORY")) {
-        memset(historyBuffer, 0, sizeof(historyBuffer));
-        historyIndex = 0;
-        historyWrapped = false;
-        LittleFS.remove("/history.bin");
-        if (Serial) Serial.println("STATUS:HISTORY_CLEARED");
+        clearLocalHistory();
     }
     else if (input.equalsIgnoreCase("RESET")) {
         preferences.begin("wifi", false); preferences.clear(); preferences.end(); 

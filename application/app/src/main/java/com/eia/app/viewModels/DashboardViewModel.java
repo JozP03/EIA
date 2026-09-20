@@ -304,9 +304,11 @@ public class DashboardViewModel extends AndroidViewModel {
         context.append("2. Możesz zrestartować czujnik komendą: [CMD:RESET:PHYSICAL_ID].\n");
         context.append("3. Możesz przywrócić czujnik do ustawień fabrycznych komendą: [CMD:FACTORY_RESET:PHYSICAL_ID].\n");
         context.append("4. Możesz kalibrować WYŁĄCZNIE czujniki temperatury komendą: [CMD:CALIBRATE:PHYSICAL_ID:VALUE], gdzie VALUE to przesunięcie (np. -1.0 lub 0.5).\n");
-        context.append("5. Możesz zmienić tryb pracy czujnika (I2C lub EXT) komendą: [CMD:SET_MODE:PHYSICAL_ID:MODE:UNIT]. MODE to 'I2C' lub 'EXT'. UNIT to jednostka podana przez użytkownika.\n");
+        context.append("5. Możesz zmienić tryb pracy czujnika (I2C lub EXT) komendą: [CMD:SET_MODE:PHYSICAL_ID:MODE:UNIT]. MODE to 'I2C' lub 'EXT'. UNIT to jednostka (wymagana tylko dla EXT).\n");
         context.append("   * WAŻNE: Przy zmianie na tryb EXT, poinformuj użytkownika o konieczności podłączenia pinu DATA OUT czujnika do pinu 0 układu.\n");
-        context.append("   * Jeśli użytkownik nie podał jednostki przy prośbie o zmianę trybu, zapytaj go o nią.\n");
+        context.append("   * Jeśli tryb to EXT i użytkownik nie podał jednostki, zapytaj go o nią.\n");
+        context.append("   * Dla trybu I2C parametr UNIT nie jest wymagany: [CMD:SET_MODE:PHYSICAL_ID:I2C].\n");
+        context.append("   * WAŻNE: Zmiana trybu pracy (SET_MODE) powoduje nieodwracalne usunięcie dotychczasowych danych historycznych tego czujnika z bazy danych.\n");
         context.append("6. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
         context.append("7. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
 
@@ -315,6 +317,7 @@ public class DashboardViewModel extends AndroidViewModel {
         context.append("- Odpowiadaj bardzo krótko, konkretnie i wyłącznie na temat.\n");
         context.append("- Unikaj długich wstępów i zbędnych zdań.\n");
         context.append("- Jeśli użytkownik pyta o dane, podaj je od razu.\n");
+        context.append("- Poinformuj użytkownika, że usunięcie bramki z aplikacji spowoduje trwałe usunięcie wszystkich powiązanych z nią danych historycznych z bazy danych.\n");
         context.append("- Jeśli użytkownik prosi o pomoc lub pyta co potrafisz, wymień zwięźle swoje funkcje: monitorowanie sensorów, zmiana interwału raportowania, restart, przywracanie ustawień fabrycznych oraz kalibracja temperatury.\n");
 
         context.append("\nNa podstawie powyższych danych odpowiedz na pytanie użytkownika.");
@@ -398,13 +401,51 @@ public class DashboardViewModel extends AndroidViewModel {
             payload = "ResetToDefault";
         } else if ("CALIBRATE".equals(action) && parts.length >= 3) {
             payload = "Calibration:" + parts[2];
-        } else if ("SET_MODE".equals(action) && parts.length >= 4) {
+        } else if ("SET_MODE".equals(action) && parts.length >= 3) {
             String mode = parts[2];
-            String unit = parts[3];
+            String physicalId = parts[1];
             payload = "Mode:" + mode;
-            saveCustomUnit(parts[1], unit);
+            
+            // Usuwanie danych przy zmianie trybu
+            clearPhysicalSensorData(physicalId);
+
+            if ("EXT".equalsIgnoreCase(mode) && parts.length >= 4) {
+                saveCustomUnit(physicalId, parts[3]);
+            } else if ("I2C".equalsIgnoreCase(mode)) {
+                removeCustomUnit(physicalId);
+            }
         }
         return payload;
+    }
+
+    private void removeCustomUnit(String physicalId) {
+        prefs.edit().remove("custom_unit_" + physicalId).apply();
+    }
+
+    private void clearPhysicalSensorData(String physicalId) {
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            db.readingDao().deleteReadingsForPhysicalSensor(physicalId);
+            
+            new Handler(Looper.getMainLooper()).post(() -> {
+                historyStats.entrySet().removeIf(entry -> entry.getKey().startsWith(physicalId + "_"));
+                
+                List<Device> currentList = devices.getValue();
+                if (currentList != null) {
+                    boolean anyRemoved = false;
+                    for (Device d : currentList) {
+                        if (d.getSensorList() != null) {
+                            int sizeBefore = d.getSensorList().size();
+                            d.getSensorList().removeIf(s -> physicalId.equals(s.getPhysicalId()));
+                            if (d.getSensorList().size() != sizeBefore) anyRemoved = true;
+                        }
+                    }
+                    if (anyRemoved) {
+                        devices.setValue(new ArrayList<>(currentList));
+                        persistDevices(currentList);
+                    }
+                }
+            });
+        });
     }
 
     private void saveCustomUnit(String physicalId, String unit) {
@@ -527,11 +568,6 @@ public class DashboardViewModel extends AndroidViewModel {
                 found = true;
             }
         }
-
-        if (!found && isOnline) {
-            String name = sensorId;
-            sensors.add(new Sensor(sensorId + "_status", name, "---", 0, !effectiveOnline, "", true, sensorId));
-        }
     }
 
   public void loadDevices() {
@@ -593,9 +629,27 @@ public class DashboardViewModel extends AndroidViewModel {
     public void deleteDevice(String deviceId) {
         List<Device> currentList = devices.getValue();
         if (currentList != null) {
-            currentList.removeIf(d -> d.getId().equals(deviceId));
-            devices.setValue(new ArrayList<>(currentList));
-            persistDevices(currentList);
+            Device toDelete = null;
+            for (Device d : currentList) {
+                if (d.getId().equals(deviceId)) {
+                    toDelete = d;
+                    break;
+                }
+            }
+
+            if (toDelete != null) {
+                final Device finalToDelete = toDelete;
+                AppDatabase.databaseWriteExecutor.execute(() -> {
+                    if (finalToDelete.getSensorList() != null) {
+                        for (Sensor s : finalToDelete.getSensorList()) {
+                            db.readingDao().deleteReadingsForSensor(s.getId());
+                        }
+                    }
+                });
+                currentList.remove(toDelete);
+                devices.setValue(new ArrayList<>(currentList));
+                persistDevices(currentList);
+            }
         }
     }
 

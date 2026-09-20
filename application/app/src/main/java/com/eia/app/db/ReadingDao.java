@@ -32,4 +32,7 @@ public interface ReadingDao {
 
     @Query("DELETE FROM sensor_readings WHERE sensorId = :sensorId")
     void deleteReadingsForSensor(String sensorId);
+
+    @Query("DELETE FROM sensor_readings WHERE sensorId LIKE :physicalId || '_%'")
+    void deleteReadingsForPhysicalSensor(String physicalId);
 }
