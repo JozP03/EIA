@@ -43,10 +43,20 @@ public class DashboardViewModel extends AndroidViewModel {
     private final SharedPreferences prefs;
     private final AppDatabase db;
     private final Map<String, Long> lastSyncTimes = new HashMap<>();
+    private final Map<String, Long> lastLiveTimes = new HashMap<>();
     private final MutableLiveData<Boolean> isSyncing = new MutableLiveData<>(false);
     private final List<ChatMessage> chatHistory = new ArrayList<>();
     private final Observer<MqttEvent> mqttObserver = this::handleMqttEvent;
     private final Map<String, Map<String, SensorStats>> historyStats = new HashMap<>();
+
+    private final Handler staleCheckHandler = new Handler(Looper.getMainLooper());
+    private final Runnable staleCheckRunnable = new Runnable() {
+        @Override
+        public void run() {
+            checkStaleSensors();
+            staleCheckHandler.postDelayed(this, 10000);
+        }
+    };
 
 
     public DashboardViewModel(@NonNull Application application) {
@@ -56,6 +66,7 @@ public class DashboardViewModel extends AndroidViewModel {
         loadDevices();
         observeMqttEvents();
         cleanOldData();
+        staleCheckHandler.postDelayed(staleCheckRunnable, 10000);
     }
 
     private void observeMqttEvents() {
@@ -81,14 +92,14 @@ public class DashboardViewModel extends AndroidViewModel {
                     if (event.getType() == MqttEvent.Type.STATUS) {
                         boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
                         updatedDevice.setOnline(isOnline);
-                        
-                        // Jeśli bramka jest offline
-                        if (!isOnline) {
+
+                        // Przy zmianie statusu bramki resetujemy sensory do stanu oczekiwania (hasError = true)
+                        if (updatedDevice.getSensorList() != null) {
                             for (Sensor s : updatedDevice.getSensorList()) {
                                 s.setHasError(true);
                             }
                         }
-                        
+
                         newList.add(updatedDevice);
                         anyUpdated = true;
                     } else if (event.getType() == MqttEvent.Type.DATA) {
@@ -120,7 +131,7 @@ public class DashboardViewModel extends AndroidViewModel {
                 Log.d(TAG, "new device: " + event.getDeviceId());
                 String defaultName = getApplication().getString(R.string.gateway_default_name, event.getDeviceId());
                 Device newDevice = new Device(event.getDeviceId(), defaultName);
-                
+
                 if (event.getType() == MqttEvent.Type.STATUS) {
                     boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
                     newDevice.setOnline(isOnline);
@@ -130,7 +141,7 @@ public class DashboardViewModel extends AndroidViewModel {
                 } else if (event.getType() == MqttEvent.Type.SENSOR_STATUS) {
                     updateSensorStatus(newDevice, event.getSensorId(), event.getPayload());
                 }
-                
+
                 newList.add(newDevice);
                 anyUpdated = true;
             }
@@ -287,7 +298,6 @@ public class DashboardViewModel extends AndroidViewModel {
                                    .append(s.getValue()).append(" ").append(s.getUnit()).append("\n");
                         }
 
-                        // Dodanie statystyk historycznych (trendy)
                         Map<String, SensorStats> statsMap = historyStats.get(s.getId());
                         if (statsMap != null && !statsMap.isEmpty()) {
                             context.append("    (Trendy historyczne dla ").append(s.getUnit()).append("):\n");
@@ -317,7 +327,6 @@ public class DashboardViewModel extends AndroidViewModel {
         context.append("- Odpowiadaj bardzo krótko, konkretnie i wyłącznie na temat.\n");
         context.append("- Unikaj długich wstępów i zbędnych zdań.\n");
         context.append("- Jeśli użytkownik pyta o dane, podaj je od razu.\n");
-        context.append("- Poinformuj użytkownika, że usunięcie bramki z aplikacji spowoduje trwałe usunięcie wszystkich powiązanych z nią danych historycznych z bazy danych.\n");
         context.append("- Jeśli użytkownik prosi o pomoc lub pyta co potrafisz, wymień zwięźle swoje funkcje: monitorowanie sensorów, zmiana interwału raportowania, restart, przywracanie ustawień fabrycznych oraz kalibracja temperatury.\n");
 
         context.append("\nNa podstawie powyższych danych odpowiedz na pytanie użytkownika.");
@@ -479,6 +488,7 @@ public class DashboardViewModel extends AndroidViewModel {
 
                 if (isLive) {
                     s.setHasError(false);
+                    lastLiveTimes.put(id, System.currentTimeMillis());
                 }
 
                 found = true;
@@ -508,7 +518,10 @@ public class DashboardViewModel extends AndroidViewModel {
                     default: name = physicalId; break;
                 }
             }
-            sensors.add(new Sensor(id, name, unit, value, false, prefix, isPrimary, physicalId));
+            if (isLive) {
+                lastLiveTimes.put(id, System.currentTimeMillis());
+            }
+            sensors.add(new Sensor(id, name, unit, value, !isLive, prefix, isPrimary, physicalId));
         }
         
         // Zastosowanie niestandardowej jednostki, jeśli istnieje
@@ -561,21 +574,29 @@ public class DashboardViewModel extends AndroidViewModel {
         boolean isOnline = "ONLINE".equalsIgnoreCase(payload);
         boolean effectiveOnline = isOnline && device.isOnline();
 
-        boolean found = false;
         for (Sensor s : sensors) {
             if (s.getPhysicalId() != null && s.getPhysicalId().equals(sensorId)) {
                 s.setHasError(!effectiveOnline);
-                found = true;
+                if (effectiveOnline) {
+                    lastLiveTimes.put(s.getId(), System.currentTimeMillis());
+                }
             }
         }
     }
 
-  public void loadDevices() {
+    public void loadDevices() {
         String json = prefs.getString(KEY_DEVICES, null);
         if (json != null) {
             Type type = new TypeToken<ArrayList<Device>>() {}.getType();
             List<Device> loadedDevices = gson.fromJson(json, type);
             if (loadedDevices != null) {
+                for (Device d : loadedDevices) {
+                    if (d.getSensorList() != null) {
+                        for (Sensor s : d.getSensorList()) {
+                            s.setHasError(true);
+                        }
+                    }
+                }
                 devices.setValue(loadedDevices);
             }
         }
@@ -776,9 +797,59 @@ public class DashboardViewModel extends AndroidViewModel {
         chatHistory.clear();
     }
 
+    private void checkStaleSensors() {
+        List<Device> currentList = devices.getValue();
+        if (currentList == null || currentList.isEmpty()) return;
+
+        long now = System.currentTimeMillis();
+        long timeoutMillis = 60000L;
+        boolean anyChanged = false;
+
+        List<Device> updatedList = new ArrayList<>();
+        for (Device d : currentList) {
+            if (d.getSensorList() == null || d.getSensorList().isEmpty()) {
+                updatedList.add(d);
+                continue;
+            }
+
+            Device updatedDevice = d.copy();
+            boolean deviceChanged = false;
+
+            for (Sensor s : updatedDevice.getSensorList()) {
+                if (!updatedDevice.isOnline()) {
+                    if (!s.isHasError()) {
+                        s.setHasError(true);
+                        deviceChanged = true;
+                    }
+                } else {
+                    Long lastLive = lastLiveTimes.get(s.getId());
+                    if (lastLive == null || (now - lastLive > timeoutMillis)) {
+                        if (!s.isHasError()) {
+                            s.setHasError(true);
+                            deviceChanged = true;
+                        }
+                    }
+                }
+            }
+
+            if (deviceChanged) {
+                anyChanged = true;
+                updatedList.add(updatedDevice);
+            } else {
+                updatedList.add(d);
+            }
+        }
+
+        if (anyChanged) {
+            devices.setValue(updatedList);
+            persistDevices(updatedList);
+        }
+    }
+
     @Override
     protected void onCleared() {
         super.onCleared();
+        staleCheckHandler.removeCallbacks(staleCheckRunnable);
         MqttRepository.getInstance().getEventStream().removeObserver(mqttObserver);
     }
 

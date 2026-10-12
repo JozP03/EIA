@@ -1,6 +1,5 @@
 package com.eia.app.adapters;
 
-import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,7 +64,6 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
             sensorGroups.get(pid).add(s);
         }
         submitList(physicalIds);
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -120,18 +118,19 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         if (sensor.isHasError()) {
             tvValue.setText("--");
             statusIco.setBackgroundColor(container.getContext().getColor(R.color.accent_red));
-            chart.setVisibility(View.GONE);
         } else {
             tvValue.setText(String.format(Locale.getDefault(), "%.1f %s", sensor.getValue(), sensor.getUnit()));
             statusIco.setBackgroundColor(container.getContext().getColor(R.color.accent_green));
-            chart.setVisibility(View.VISIBLE);
-            
-            viewModel.getReadingsForSensor(sensor.getId()).observe(lifecycleOwner, readings -> {
-                if (readings != null && !readings.isEmpty()) {
-                    setupChart(chart, readings, sensor.getPrefix());
-                }
-            });
         }
+
+        viewModel.getReadingsForSensor(sensor.getId()).observe(lifecycleOwner, readings -> {
+            if (readings != null && !readings.isEmpty()) {
+                chart.setVisibility(View.VISIBLE);
+                setupChart(chart, readings, sensor.getPrefix());
+            } else {
+                chart.setVisibility(View.GONE);
+            }
+        });
 
         container.addView(row);
     }
@@ -141,10 +140,14 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         float dataMin = Float.MAX_VALUE;
         float dataMax = Float.MIN_VALUE;
 
+        // Używamy czasu relatywnego względem pierwszego odczytu, aby uniknąć utraty precyzji float
+        final long firstTimestamp = readings.get(0).getTimestamp();
+
         for (int i = 0; i < readings.size(); i++) {
             SensorReading reading = readings.get(i);
             float val = reading.getValue();
-            entries.add(new Entry(reading.getTimestamp(), val));
+            // X to różnica czasu w milisekundach od początku zakresu
+            entries.add(new Entry((float)(reading.getTimestamp() - firstTimestamp), val));
             if (val < dataMin) dataMin = val;
             if (val > dataMax) dataMax = val;
         }
@@ -177,7 +180,7 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
         dataSet.setLineWidth(2f);
         dataSet.setDrawCircles(false);
         dataSet.setDrawValues(false);
-        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        dataSet.setMode(LineDataSet.Mode.HORIZONTAL_BEZIER);
         dataSet.setDrawFilled(true);
         dataSet.setFillColor(accentGreen);
         dataSet.setFillAlpha(20);
@@ -202,7 +205,8 @@ public class SensorGroupAdapter extends ListAdapter<String, SensorGroupAdapter.V
             private final SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
             @Override
             public String getFormattedValue(float value) {
-                return sdf.format(new Date((long) value));
+                // Przywracamy absolutny czas do sformatowania etykiety
+                return sdf.format(new Date(firstTimestamp + (long) value));
             }
         });
 

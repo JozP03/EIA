@@ -1,6 +1,5 @@
 package com.eia.app.adapters;
 
-import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,7 +14,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.eia.app.R;
 import com.eia.app.models.Sensor;
 
-import android.graphics.Color;
 import androidx.lifecycle.LifecycleOwner;
 import com.eia.app.db.SensorReading;
 import com.eia.app.viewModels.DashboardViewModel;
@@ -59,19 +57,20 @@ public class SensorCardAdapter extends ListAdapter<Sensor, SensorCardAdapter.Vie
         if (sensor.isHasError()) {
             holder.tvValue.setText("--");
             holder.ivIcon.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_red));
-            holder.sensorChart.setVisibility(View.GONE);
         } else {
             String formattedValue = String.format(Locale.getDefault(), "%.1f %s", sensor.getValue(), sensor.getUnit());
             holder.tvValue.setText(formattedValue);
             holder.ivIcon.setBackgroundColor(holder.itemView.getContext().getColor(R.color.accent_green));
-            holder.sensorChart.setVisibility(View.VISIBLE);
-            
-            viewModel.getReadingsForSensor(sensor.getId()).observe(lifecycleOwner, readings -> {
-                if (readings != null && !readings.isEmpty()) {
-                    setupChart(holder.sensorChart, readings, sensor.getUnit());
-                }
-            });
         }
+
+        viewModel.getReadingsForSensor(sensor.getId()).observe(lifecycleOwner, readings -> {
+            if (readings != null && !readings.isEmpty()) {
+                holder.sensorChart.setVisibility(View.VISIBLE);
+                setupChart(holder.sensorChart, readings, sensor.getUnit());
+            } else {
+                holder.sensorChart.setVisibility(View.GONE);
+            }
+        });
     }
 
     private void setupChart(LineChart chart, List<SensorReading> readings, String unit) {

@@ -102,8 +102,8 @@ public class DashboardFragment extends Fragment {
 
         viewModel.getDevices().observe(getViewLifecycleOwner(), newDevices -> {
             if (newDevices != null) {
+                // Musimy stworzyć nową listę, aby DiffUtil zadziałał poprawnie
                 adapter.submitList(new ArrayList<>(newDevices));
-                adapter.notifyDataSetChanged();
 
                 if (newDevices.isEmpty()) {
                     tvEmpty.setVisibility(View.VISIBLE);
