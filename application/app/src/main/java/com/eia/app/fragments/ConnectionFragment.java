@@ -24,7 +24,6 @@ public class ConnectionFragment extends Fragment {
     private UsbSerialService usbService;
     private boolean isBound = false;
 
-    //todo: Wywalić to wszytsko do viewmodelu poźniej!
 
     private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override

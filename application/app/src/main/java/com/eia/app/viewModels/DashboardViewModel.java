@@ -509,14 +509,7 @@ public class DashboardViewModel extends AndroidViewModel {
             if (existingName != null) {
                 name = existingName;
             } else {
-                switch (prefix) {
-                    case "T": name = getApplication().getString(R.string.sensor_name_temp); break;
-                    case "H": name = getApplication().getString(R.string.sensor_name_hum); break;
-                    case "P": name = getApplication().getString(R.string.sensor_name_pres); break;
-                    case "L": name = getApplication().getString(R.string.sensor_name_lux); break;
-                    case "V": name = getApplication().getString(R.string.sensor_name_volt); break;
-                    default: name = physicalId; break;
-                }
+                name = physicalId;
             }
             if (isLive) {
                 lastLiveTimes.put(id, System.currentTimeMillis());
@@ -557,8 +550,7 @@ public class DashboardViewModel extends AndroidViewModel {
             }
         }
         if (!anyFound && hasError) {
-            String errorName = getApplication().getString(R.string.sensor_error);
-            sensors.add(new Sensor(baseSensorId, errorName, "---", 0, true, "", true, baseSensorId));
+            sensors.add(new Sensor(baseSensorId, baseSensorId, "---", 0, true, "", true, baseSensorId));
         }
     }
 
