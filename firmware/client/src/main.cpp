@@ -2,10 +2,7 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_Sensor.h>
 #include <Arduino.h>
-#include <BLEAdvertising.h>
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEScan.h>
+#include "Ble5Range.h"
 #include <WiFi.h>
 #include <Wire.h>
 #include <Preferences.h>
@@ -38,9 +35,6 @@ SensorDevice mySensors[2] = {
 
 const int numSensors = sizeof(mySensors) / sizeof(mySensors[0]);
 
-BLEAdvertising *pAdvertising;
-BLEScan *pBLEScan;
-
 String uniqueSensorName = "";
 unsigned long sendInterval = 60000; // default 1 min
 float tempOffset = 0.0;
@@ -57,11 +51,9 @@ void setId() {
   uniqueSensorName = mac.substring(mac.length() - 4); 
 }
 
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice advertisedDevice) {
-        if (advertisedDevice.haveManufacturerData()) {
-            std::string strManufacturerData = advertisedDevice.getManufacturerData();
-            const char* dataPtr = strManufacturerData.c_str();
+void handleManufacturerData(const uint8_t *data, size_t length) {
+        String received(reinterpret_cast<const char *>(data), length);
+        const char* dataPtr = received.c_str();
 
             String intervalString = uniqueSensorName + ";Interval:";
             String resetString = uniqueSensorName + ";Reset";
@@ -124,9 +116,15 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
                 
                 Serial.println("\n[BLE COMMAND] Zmieniono tryb pracy na: " + newMode);
             }
-        }
-    }
-};
+}
+
+void onBleReport(const uint8_t *ad, size_t adLength, int8_t rssi) {
+  (void)rssi;
+  const uint8_t *payload = nullptr;
+  size_t payloadLength = 0;
+  if (Ble5Range::extractManufacturer(ad, adLength, &payload, &payloadLength))
+    handleManufacturerData(payload, payloadLength);
+}
 
 void setup() {
   Serial.begin(115200);
@@ -153,16 +151,9 @@ void setup() {
     }
   }
 
-  BLEDevice::init("");
-  
-  pAdvertising = BLEDevice::getAdvertising();
-  pAdvertising->setScanResponse(true);
-  
-  pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(true); 
-  pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99); 
+  if (!Ble5Range::begin(onBleReport)) {
+    Serial.println("BLE5: inicjalizacja Extended Advertising/Coded PHY nie powiodla sie");
+  }
 }
 
 void loop() {
@@ -204,24 +195,17 @@ String payload = uniqueSensorName;
     payload += ";ERR:NoSensors";
   }
 
-  BLEAdvertisementData advertisementData;
-  advertisementData.setFlags(ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
-  advertisementData.setManufacturerData(payload.c_str());
-
-  BLEAdvertisementData scanResponseData;
-  scanResponseData.setName(uniqueSensorName.c_str());
-
-  pAdvertising->setAdvertisementData(advertisementData);
-  pAdvertising->setScanResponseData(scanResponseData);
-
-  pAdvertising->start();
-  Serial.println("Rozgloszono: " + payload);
+  uint8_t adData[128];
+  size_t adLength = Ble5Range::makeManufacturerAd(
+      reinterpret_cast<const uint8_t *>(payload.c_str()), payload.length(), adData, sizeof(adData));
+  bool advertisingStarted = adLength && Ble5Range::advertise(adData, adLength);
+  Serial.println(String(advertisingStarted ? "Rozgloszono BLE5 Coded PHY: " : "Blad BLE5 TX: ") + payload);
   delay(2000);
-  pAdvertising->stop();
+  Ble5Range::stopAdvertising();
 
   Serial.println("Rozpoczynam nasluch na 5 sekund...");
-  pBLEScan->start(5, false);
-  pBLEScan->clearResults();
+  Ble5Range::startScan(500); // 500 x 10 ms = 5 s; both 1M and Coded PHY are scanned
+  Ble5Range::stopScan();
 
   unsigned long activeTime = millis();
   uint64_t sleepTimeMs = 0;

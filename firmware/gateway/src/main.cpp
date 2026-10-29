@@ -1,10 +1,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
-#include <BLEDevice.h>
-#include <BLEUtils.h>
-#include <BLEScan.h>
-#include <BLEAdvertisedDevice.h>
+#include "Ble5Range.h"
 #include <Preferences.h>
 #include <time.h> 
 #include <LittleFS.h> 
@@ -56,7 +53,6 @@ const char* root_ca = \
 String gateId;
 WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
-BLEScan* pBLEScan;
 QueueHandle_t valueQueue;
 
 struct SensorStatus {
@@ -155,10 +151,8 @@ void clearLocalHistory() {
 }
 
 // --- CALLBACK BLE---
-class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
-  void onResult(BLEAdvertisedDevice advertisedDevice) {
-    if (advertisedDevice.haveManufacturerData()) {
-      std::string strManufacturerData = advertisedDevice.getManufacturerData();
+void processManufacturerData(const uint8_t *manufacturerData, size_t manufacturerLength) {
+      std::string strManufacturerData(reinterpret_cast<const char *>(manufacturerData), manufacturerLength);
       const char* dataPtr = strManufacturerData.c_str();
 
       if (strManufacturerData.length() >= 5 && dataPtr[4] == ';') { 
@@ -227,9 +221,15 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
             }
         }
       }
-    }
-  }
-};
+}
+
+void onBleReport(const uint8_t *ad, size_t adLength, int8_t rssi) {
+  (void)rssi;
+  const uint8_t *payload = nullptr;
+  size_t payloadLength = 0;
+  if (Ble5Range::extractManufacturer(ad, adLength, &payload, &payloadLength))
+    processManufacturerData(payload, payloadLength);
+}
 
 void setup() {
   Serial.begin(115200);
@@ -250,12 +250,7 @@ void setup() {
   mqttClient.setServer(mqtt_server.c_str(), mqtt_port);
   mqttClient.setCallback(mqttCallback);
 
-  BLEDevice::init("");
-  pBLEScan = BLEDevice::getScan();
-  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(true);
-  pBLEScan->setInterval(1349);
-  pBLEScan->setWindow(449);
+  if (!Ble5Range::begin(onBleReport)) Serial.println("BLE5: inicjalizacja Extended Advertising/Coded PHY nie powiodla sie");
 
   delay(1000);
   gateId = "gate_" + WiFi.macAddress();
@@ -309,29 +304,24 @@ void loop() {
 
 // --- TASKs ---
 void bleTask(void *pvParameters) {
-    BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
-    
     while (true) {
         if (triggerBleTransmission) {
-            BLEAdvertisementData oAdvertisementData = BLEAdvertisementData();
-            std::string strServiceData = activeTxPayload;
-            oAdvertisementData.setManufacturerData(strServiceData);
+            uint8_t adData[96];
+            size_t adLength = Ble5Range::makeManufacturerAd(reinterpret_cast<const uint8_t *>(activeTxPayload), strlen(activeTxPayload), adData, sizeof(adData));
+            bool started = adLength && Ble5Range::advertise(adData, adLength);
             
-            pAdvertising->setAdvertisementData(oAdvertisementData);
-            pAdvertising->start();
-            
-            if (Serial) Serial.printf("BLE_TX: Rozglaszam komende z bufora: %s\n", activeTxPayload);
+            if (Serial) Serial.printf("BLE_TX: %s Coded PHY: %s\n", started ? "Rozglaszam" : "Blad", activeTxPayload);
             
             vTaskDelay(pdMS_TO_TICKS(3000));
             
-            pAdvertising->stop();
+            Ble5Range::stopAdvertising();
             triggerBleTransmission = false;
             
             if (Serial) Serial.println("BLE_TX: Wyslano, wracam do nasluchiwania.");
             
         } else {
-            pBLEScan->start(1, false); 
-            pBLEScan->clearResults(); 
+            Ble5Range::startScan(100); // 1 s scan on 1M and Coded PHY
+            Ble5Range::stopScan();
             vTaskDelay(pdMS_TO_TICKS(10));
         }
     }
