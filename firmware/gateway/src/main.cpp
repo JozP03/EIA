@@ -54,15 +54,20 @@ String gateId;
 WiFiClientSecure espClient;
 PubSubClient mqttClient(espClient);
 QueueHandle_t valueQueue;
+QueueHandle_t intervalQueue;
 
 struct SensorStatus {
     char id[16];
     unsigned long lastSeen;
+    uint32_t expectedIntervalMs;
+    bool intervalLoaded;
     bool isOnline;
     char lastPayload[32];
 };
 #define MAX_SENSORS 10
 SensorStatus sensorRegistry[MAX_SENSORS];
+static constexpr uint32_t DEFAULT_SENSOR_INTERVAL_MS = 60000UL;
+Preferences intervalPreferences;
 
 struct Message {
     char sensorId[12]; 
@@ -81,6 +86,11 @@ struct MailboxCommand {
     char payloadRaw[32];
 };
 MailboxCommand mailbox[MAX_SENSORS];
+
+struct IntervalUpdate {
+    char sensorId[5];
+    char command[32];
+};
 
 volatile bool triggerBleTransmission = false;
 char activeTxPayload[64] = {0};
@@ -108,6 +118,8 @@ void loadMqttConfig();
 void loadHistoryFromFlash();
 void saveHistoryToFlash();
 void clearLocalHistory();
+uint32_t loadSensorInterval(const char *sensorId);
+void updateSensorInterval(const char *sensorId, const String &command);
 
 // --- LITTLEFS ---
 void loadHistoryFromFlash() {
@@ -150,6 +162,54 @@ void clearLocalHistory() {
     if (Serial) Serial.println("STATUS:HISTORY_CLEARED");
 }
 
+uint32_t loadSensorInterval(const char *sensorId) {
+    char key[6];
+    snprintf(key, sizeof(key), "i%.4s", sensorId);
+    intervalPreferences.begin("sensorInt", true);
+    uint32_t intervalMs = intervalPreferences.getUInt(key, DEFAULT_SENSOR_INTERVAL_MS);
+    intervalPreferences.end();
+    return intervalMs ? intervalMs : DEFAULT_SENSOR_INTERVAL_MS;
+}
+
+void updateSensorInterval(const char *sensorId, const String &rawCommand) {
+    String command = rawCommand;
+    int separator = command.lastIndexOf(';');
+    if (separator >= 0) command = command.substring(separator + 1);
+
+    uint32_t intervalMs = 0;
+    if (command.startsWith("Interval:")) {
+        long seconds = command.substring(String("Interval:").length()).toInt();
+        if (seconds <= 0 || static_cast<uint64_t>(seconds) * 1000ULL > UINT32_MAX) return;
+        intervalMs = static_cast<uint32_t>(seconds) * 1000UL;
+    } else if (command.equalsIgnoreCase("ResetToDefault")) {
+        intervalMs = DEFAULT_SENSOR_INTERVAL_MS;
+    } else {
+        return;
+    }
+
+    for (int i = 0; i < MAX_SENSORS; ++i) {
+        if (strcmp(sensorRegistry[i].id, sensorId) == 0 &&
+            sensorRegistry[i].intervalLoaded &&
+            sensorRegistry[i].expectedIntervalMs == intervalMs) {
+            return;
+        }
+    }
+
+    char key[6];
+    snprintf(key, sizeof(key), "i%.4s", sensorId);
+    intervalPreferences.begin("sensorInt", false);
+    intervalPreferences.putUInt(key, intervalMs);
+    intervalPreferences.end();
+
+    for (int i = 0; i < MAX_SENSORS; ++i) {
+        if (strcmp(sensorRegistry[i].id, sensorId) == 0) {
+            sensorRegistry[i].expectedIntervalMs = intervalMs;
+            sensorRegistry[i].intervalLoaded = true;
+            break;
+        }
+    }
+}
+
 // --- CALLBACK BLE---
 void processManufacturerData(const uint8_t *manufacturerData, size_t manufacturerLength) {
       std::string strManufacturerData(reinterpret_cast<const char *>(manufacturerData), manufacturerLength);
@@ -171,8 +231,18 @@ void processManufacturerData(const uint8_t *manufacturerData, size_t manufacture
             
             const char* semiColonIndex = dataPtr + 4;
             strncpy(msg.sensorId, dataPtr, 4);
-            
-            strncpy(msg.payloadData, semiColonIndex + 1, sizeof(msg.payloadData) - 1);
+
+            String sensorPayload(semiColonIndex + 1, manufacturerLength - 5);
+            int intervalMarker = sensorPayload.lastIndexOf(";I:");
+            if (intervalMarker >= 0) {
+                String intervalCommand = "Interval:" + sensorPayload.substring(intervalMarker + 3);
+                IntervalUpdate update = {};
+                snprintf(update.sensorId, sizeof(update.sensorId), "%.4s", msg.sensorId);
+                snprintf(update.command, sizeof(update.command), "%s", intervalCommand.c_str());
+                if (intervalQueue) xQueueSend(intervalQueue, &update, 0);
+                sensorPayload.remove(intervalMarker);
+            }
+            strncpy(msg.payloadData, sensorPayload.c_str(), sizeof(msg.payloadData) - 1);
 
             bool isNewData = false;
             bool found = false;
@@ -196,6 +266,8 @@ void processManufacturerData(const uint8_t *manufacturerData, size_t manufacture
                         snprintf(sensorRegistry[i].id, sizeof(sensorRegistry[i].id), "%s", msg.sensorId);
                         snprintf(sensorRegistry[i].lastPayload, sizeof(sensorRegistry[i].lastPayload), "%s", msg.payloadData);
                         sensorRegistry[i].lastSeen = millis();
+                        sensorRegistry[i].expectedIntervalMs = DEFAULT_SENSOR_INTERVAL_MS;
+                        sensorRegistry[i].intervalLoaded = false;
                         isNewData = true;
                         break;
                     }
@@ -242,6 +314,7 @@ void setup() {
   WiFi.disconnect();
 
   valueQueue = xQueueCreate(15, sizeof(Message));
+  intervalQueue = xQueueCreate(10, sizeof(IntervalUpdate));
   espClient.setCACert(root_ca);
   
   mqttClient.setBufferSize(512); 
@@ -309,6 +382,20 @@ void bleTask(void *pvParameters) {
             uint8_t adData[96];
             size_t adLength = Ble5Range::makeManufacturerAd(reinterpret_cast<const uint8_t *>(activeTxPayload), strlen(activeTxPayload), adData, sizeof(adData));
             bool started = adLength && Ble5Range::advertise(adData, adLength);
+
+            if (started) {
+                char *separator = strchr(activeTxPayload, ';');
+                if (separator && strlen(activeTxPayload) >= 5) {
+                    IntervalUpdate update = {};
+                    memcpy(update.sensorId, activeTxPayload, 4);
+                    update.sensorId[4] = '\0';
+                    snprintf(update.command, sizeof(update.command), "%s", separator + 1);
+                    String command(update.command);
+                    if (command.startsWith("Interval:") || command.equalsIgnoreCase("ResetToDefault")) {
+                        xQueueSend(intervalQueue, &update, 0);
+                    }
+                }
+            }
             
             if (Serial) Serial.printf("BLE_TX: %s Coded PHY: %s\n", started ? "Rozglaszam" : "Blad", activeTxPayload);
             
@@ -333,6 +420,11 @@ void mqttTask(void *pvParameters) {
     static unsigned long mqttOfflineTime = 0;
 
     while (true) {
+        IntervalUpdate intervalUpdate;
+        while (xQueueReceive(intervalQueue, &intervalUpdate, 0) == pdTRUE) {
+            updateSensorInterval(intervalUpdate.sensorId, String(intervalUpdate.command));
+        }
+
         if (WiFi.status() == WL_CONNECTED && mqtt_server.length() > 0) {
             if (!mqttClient.connected()) {
                 
@@ -353,7 +445,14 @@ void mqttTask(void *pvParameters) {
                 unsigned long now_ms = millis();
                 for (int i = 0; i < MAX_SENSORS; i++) {
                     if (sensorRegistry[i].id[0] != '\0') {
-                        bool isRecentlySeen = (now_ms - sensorRegistry[i].lastSeen < 360000); 
+                        if (!sensorRegistry[i].intervalLoaded) {
+                            sensorRegistry[i].expectedIntervalMs = loadSensorInterval(sensorRegistry[i].id);
+                            sensorRegistry[i].intervalLoaded = true;
+                        }
+                        const uint64_t offlineTimeoutMs =
+                            (static_cast<uint64_t>(sensorRegistry[i].expectedIntervalMs) * 9ULL) / 4ULL;
+                        const uint32_t elapsedMs = static_cast<uint32_t>(now_ms - sensorRegistry[i].lastSeen);
+                        bool isRecentlySeen = elapsedMs < offlineTimeoutMs;
                         
                         if (isRecentlySeen && !sensorRegistry[i].isOnline) {
                             sensorRegistry[i].isOnline = true;

@@ -195,6 +195,9 @@ String payload = uniqueSensorName;
     payload += ";ERR:NoSensors";
   }
 
+  // Send the configured cadence to the gateway so its liveness timeout follows this sensor.
+  payload += ";I:" + String(sendInterval / 1000UL);
+
   uint8_t adData[128];
   size_t adLength = Ble5Range::makeManufacturerAd(
       reinterpret_cast<const uint8_t *>(payload.c_str()), payload.length(), adData, sizeof(adData));

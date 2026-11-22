@@ -108,15 +108,15 @@ public class DeviceDetailsFragment extends Fragment {
         // Obsługa dymka AI
         View fabAi = view.findViewById(R.id.fabAiChat);
         SharedPreferences prefs = requireActivity().getSharedPreferences("EIA_PREFS", Context.MODE_PRIVATE);
+        String provider = prefs.getString("ai_provider", "");
         String aiKey = prefs.getString("ai_api_key", "");
-        
-        Log.d("DeviceDetailsFragment", "Klucz AI: [" + aiKey + "]");
+        String baseUrl = prefs.getString("ai_base_url", "");
 
-        if (!aiKey.trim().isEmpty()) {
+        boolean isAiEnabled = !aiKey.trim().isEmpty() || !baseUrl.trim().isEmpty() || !provider.trim().isEmpty();
+
+        if (isAiEnabled) {
             fabAi.setVisibility(View.VISIBLE);
-            fabAi.setOnClickListener(v -> {
-                showAiChat();
-            });
+            fabAi.setOnClickListener(v -> showAiChat());
         }
     }
 

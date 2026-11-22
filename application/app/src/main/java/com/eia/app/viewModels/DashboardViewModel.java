@@ -44,6 +44,7 @@ public class DashboardViewModel extends AndroidViewModel {
     private final AppDatabase db;
     private final Map<String, Long> lastSyncTimes = new HashMap<>();
     private final Map<String, Long> lastLiveTimes = new HashMap<>();
+    private final Map<String, Long> lastDeviceMessageTimes = new HashMap<>();
     private final MutableLiveData<Boolean> isSyncing = new MutableLiveData<>(false);
     private final List<ChatMessage> chatHistory = new ArrayList<>();
     private final Observer<MqttEvent> mqttObserver = this::handleMqttEvent;
@@ -77,6 +78,7 @@ public class DashboardViewModel extends AndroidViewModel {
         if (event == null || event.getDeviceId() == null) return;
 
         Log.d(TAG, "Nowy event MQTT: " + event.getDeviceId() + " [" + event.getType() + "]");
+        lastDeviceMessageTimes.put(event.getDeviceId(), System.currentTimeMillis());
 
         List<Device> currentList = devices.getValue();
         if (currentList == null) return;
@@ -93,10 +95,16 @@ public class DashboardViewModel extends AndroidViewModel {
                         boolean isOnline = "ONLINE".equalsIgnoreCase(event.getPayload());
                         updatedDevice.setOnline(isOnline);
 
-                        // Przy zmianie statusu bramki resetujemy sensory do stanu oczekiwania (hasError = true)
-                        if (updatedDevice.getSensorList() != null) {
+                        if (!isOnline && updatedDevice.getSensorList() != null) {
                             for (Sensor s : updatedDevice.getSensorList()) {
                                 s.setHasError(true);
+                            }
+                        } else if (isOnline && updatedDevice.getSensorList() != null) {
+                            long now = System.currentTimeMillis();
+                            for (Sensor s : updatedDevice.getSensorList()) {
+                                if (!s.isHasError()) {
+                                    lastLiveTimes.put(s.getId(), now);
+                                }
                             }
                         }
 
@@ -309,25 +317,32 @@ public class DashboardViewModel extends AndroidViewModel {
                 }
             }
         }
-        context.append("\nZASADY STEROWANIA:\n");
-        context.append("1. Możesz zmieniać częstotliwość raportowania czujników komendą: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS].\n");
-        context.append("2. Możesz zrestartować czujnik komendą: [CMD:RESET:PHYSICAL_ID].\n");
-        context.append("3. Możesz przywrócić czujnik do ustawień fabrycznych komendą: [CMD:FACTORY_RESET:PHYSICAL_ID].\n");
-        context.append("4. Możesz kalibrować WYŁĄCZNIE czujniki temperatury komendą: [CMD:CALIBRATE:PHYSICAL_ID:VALUE], gdzie VALUE to przesunięcie (np. -1.0 lub 0.5).\n");
-        context.append("5. Możesz zmienić tryb pracy czujnika (I2C lub EXT) komendą: [CMD:SET_MODE:PHYSICAL_ID:MODE:UNIT]. MODE to 'I2C' lub 'EXT'. UNIT to jednostka (wymagana tylko dla EXT).\n");
-        context.append("   * WAŻNE: Przy zmianie na tryb EXT, poinformuj użytkownika o konieczności podłączenia pinu DATA OUT czujnika do pinu 0 układu.\n");
-        context.append("   * Jeśli tryb to EXT i użytkownik nie podał jednostki, zapytaj go o nią.\n");
-        context.append("   * Dla trybu I2C parametr UNIT nie jest wymagany: [CMD:SET_MODE:PHYSICAL_ID:I2C].\n");
-        context.append("   * WAŻNE: Zmiana trybu pracy (SET_MODE) powoduje nieodwracalne usunięcie dotychczasowych danych historycznych tego czujnika z bazy danych.\n");
-        context.append("6. PHYSICAL_ID to identyfikator czujnika (np. 40E0). SECONDS to liczba sekund.\n");
-        context.append("7. Potwierdź wykonanie akcji jednym krótkim zdaniem.\n");
+        context.append("\nBARDZO WAŻNA ZASADA STEROWANIA:\n");
+        context.append("Gdy użytkownik prosi o jakąkolwiek akcję (kalibrację, zmianę interwału, restart, zmianę trybu), TWOIM OBOWIĄZKIEM JEST wygenerowanie odpowiedniej komendy w nawiasach [CMD:...] NA SAMYM POCZĄTKU TWOJEJ ODPOWIEDZI. Bez tagu [CMD:...] akcja fizyczna NIE zostanie wykonana!\n\n");
 
-        context.append("\nINSTRUKCJA ODPOWIADANIA:\n");
-        context.append("- Odpowiadaj zawsze w języku, w którym napisał użytkownik.\n");
-        context.append("- Odpowiadaj bardzo krótko, konkretnie i wyłącznie na temat.\n");
-        context.append("- Unikaj długich wstępów i zbędnych zdań.\n");
-        context.append("- Jeśli użytkownik pyta o dane, podaj je od razu.\n");
-        context.append("- Jeśli użytkownik prosi o pomoc lub pyta co potrafisz, wymień zwięźle swoje funkcje: monitorowanie sensorów, zmiana interwału raportowania, restart, przywracanie ustawień fabrycznych oraz kalibracja temperatury.\n");
+        context.append("DOZWOLONE FORMATY KOMEND:\n");
+        context.append("1. Kalibracja temperatury: [CMD:CALIBRATE:PHYSICAL_ID:VALUE] (gdzie VALUE to przesunięcie, np. -1.0 lub 0.5).\n");
+        context.append("2. Częstotliwość raportowania: [CMD:SET_INTERVAL:PHYSICAL_ID:SECONDS] (gdzie SECONDS to liczba sekund).\n");
+        context.append("3. Restart czujnika: [CMD:RESET:PHYSICAL_ID].\n");
+        context.append("4. Przywrócenie ustawień fabrycznych: [CMD:FACTORY_RESET:PHYSICAL_ID].\n");
+        context.append("5. Zmiana trybu pracy czujnika (I2C lub EXT): [CMD:SET_MODE:PHYSICAL_ID:MODE:UNIT]. MODE to 'I2C' lub 'EXT'. UNIT to jednostka (wymagana tylko dla EXT).\n");
+        context.append("   * Przy zmianie na EXT poinformuj użytkownika o konieczności podłączenia pinu DATA OUT do pinu 0.\n");
+        context.append("   * Dla trybu I2C parametr UNIT nie jest wymagany: [CMD:SET_MODE:PHYSICAL_ID:I2C].\n");
+        context.append("   * Zmiana trybu pracy (SET_MODE) usuwa dane historyczne tego czujnika.\n");
+        context.append("6. PHYSICAL_ID to identyfikator sprzętowy czujnika z listy (np. 40E0).\n\n");
+
+        context.append("OBOWIĄZKOWE PRZYKŁADY GENEROWANIA ODPOWIEDZI:\n");
+        context.append("- Pytanie: \"kalibruj temperature dla czujnika 40E0 o -1 stopien\"\n");
+        context.append("  Odpowiedź: \"[CMD:CALIBRATE:40E0:-1.0] Skalibrowano temperaturę czujnika 40E0 o -1.0°C.\"\n");
+        context.append("- Pytanie: \"zmień interwał dla 40E0 na 10 sekund\"\n");
+        context.append("  Odpowiedź: \"[CMD:SET_INTERVAL:40E0:10] Zmieniono interwał raportowania dla 40E0 na 10 sekund.\"\n");
+        context.append("- Pytanie: \"zrestartuj czujnik 40E0\"\n");
+        context.append("  Odpowiedź: \"[CMD:RESET:40E0] Czujnik 40E0 został zrestartowany.\"\n\n");
+
+        context.append("INSTRUKCJA ODPOWIADANIA:\n");
+        context.append("- Odpowiadaj w języku użytkownika.\n");
+        context.append("- Zawsze wstawiaj właściwą komendę [CMD:...] na początku odpowiedzi, gdy użytkownik prosi o akcję sterującą!\n");
+        context.append("- Odpowiedź tekstowa po komendzie ma być bardzo krótka (1 zdanie).\n");
 
         context.append("\nNa podstawie powyższych danych odpowiedz na pytanie użytkownika.");
         return context.toString();
@@ -409,7 +424,7 @@ public class DashboardViewModel extends AndroidViewModel {
         } else if ("FACTORY_RESET".equals(action)) {
             payload = "ResetToDefault";
         } else if ("CALIBRATE".equals(action) && parts.length >= 3) {
-            payload = "Calibration:" + parts[2];
+            payload = "Calibrate:" + parts[2];
         } else if ("SET_MODE".equals(action) && parts.length >= 3) {
             String mode = parts[2];
             String physicalId = parts[1];
@@ -582,10 +597,13 @@ public class DashboardViewModel extends AndroidViewModel {
             Type type = new TypeToken<ArrayList<Device>>() {}.getType();
             List<Device> loadedDevices = gson.fromJson(json, type);
             if (loadedDevices != null) {
+                long now = System.currentTimeMillis();
                 for (Device d : loadedDevices) {
                     if (d.getSensorList() != null) {
                         for (Sensor s : d.getSensorList()) {
-                            s.setHasError(true);
+                            if (!s.isHasError()) {
+                                lastLiveTimes.put(s.getId(), now);
+                            }
                         }
                     }
                 }
@@ -794,7 +812,7 @@ public class DashboardViewModel extends AndroidViewModel {
         if (currentList == null || currentList.isEmpty()) return;
 
         long now = System.currentTimeMillis();
-        long timeoutMillis = 60000L;
+        long timeoutMillis = 90000L; // 1.5 minuty (90 sekund) braku ramek na żywo
         boolean anyChanged = false;
 
         List<Device> updatedList = new ArrayList<>();
@@ -807,6 +825,7 @@ public class DashboardViewModel extends AndroidViewModel {
             Device updatedDevice = d.copy();
             boolean deviceChanged = false;
 
+            // Sprawdzanie wyłącznie czujników – status bramki sterowany jest tylko przez MQTT
             for (Sensor s : updatedDevice.getSensorList()) {
                 if (!updatedDevice.isOnline()) {
                     if (!s.isHasError()) {
@@ -815,7 +834,11 @@ public class DashboardViewModel extends AndroidViewModel {
                     }
                 } else {
                     Long lastLive = lastLiveTimes.get(s.getId());
-                    if (lastLive == null || (now - lastLive > timeoutMillis)) {
+                    if (lastLive == null) {
+                        if (!s.isHasError()) {
+                            lastLiveTimes.put(s.getId(), now);
+                        }
+                    } else if (now - lastLive > timeoutMillis) {
                         if (!s.isHasError()) {
                             s.setHasError(true);
                             deviceChanged = true;
